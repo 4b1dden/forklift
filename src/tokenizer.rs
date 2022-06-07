@@ -92,11 +92,15 @@ pub enum LexerError {
     UnexpectedEOF,
     NoCharMatch,
     MultipleDotsInNumber,
-    AmbiguousCharInNumber,
     UnsupportedChar(char),
-    CouldNotTokenize { position: usize, snippet: String },
-
-    Placeholder, // TODO: get rid of this
+    CouldNotTokenize {
+        position: usize,
+        snippet: String,
+    },
+    CouldNotParseType {
+        expected_type: String, // we'll introduce types enum later
+        received: String,
+    },
 }
 
 fn tokenize_ident(src: &str) -> LexerResult<(TokenKind, usize)> {
@@ -146,10 +150,20 @@ fn tokenize_arbitrary_number(src: &str) -> LexerResult<(TokenKind, usize)> {
     })?;
 
     let tok = if has_dot {
-        let dec: f64 = received.parse().map_err(|_| LexerError::Placeholder)?;
+        let dec: f64 = received
+            .parse()
+            .map_err(|_| LexerError::CouldNotParseType {
+                expected_type: String::from("f64"),
+                received: received.to_string(),
+            })?;
         TokenKind::Decimal(dec)
     } else {
-        let int: i32 = received.parse().map_err(|_| LexerError::Placeholder)?;
+        let int: i32 = received
+            .parse()
+            .map_err(|_| LexerError::CouldNotParseType {
+                expected_type: String::from("i32"),
+                received: received.to_string(),
+            })?;
         TokenKind::Integer(int)
     };
 
@@ -189,7 +203,7 @@ where
 pub fn tokenize_single_token(data: &str) -> LexerResult<(TokenKind, usize)> {
     let upcoming = data.chars().next().ok_or(LexerError::UnexpectedEOF)?;
 
-    let tok = match upcoming {
+    match upcoming {
         '+' => Ok((TokenKind::Plus, 1)),
         '-' => Ok((TokenKind::Minus, 1)),
         '*' => Ok((TokenKind::Asterisk, 1)),
@@ -205,9 +219,7 @@ pub fn tokenize_single_token(data: &str) -> LexerResult<(TokenKind, usize)> {
         '0'..='9' => tokenize_arbitrary_number(data),
         c @ '_' | c if c.is_alphabetic() => tokenize_ident(data),
         _ => Err(LexerError::UnsupportedChar(upcoming)),
-    };
-
-    tok
+    }
 }
 
 pub fn tokenize(src: &str) -> LexerResult<Vec<LexedToken>> {

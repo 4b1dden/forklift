@@ -1,7 +1,18 @@
+use std::io::{self, BufRead};
+
 mod tokenizer;
 
 fn main() {
-    println!("Hello, world!");
+    let mut line = String::new();
+    let stdin = io::stdin();
+
+    while line.trim().to_lowercase() != "exit" {
+        println!("fl >>>");
+        line.clear();
+        stdin.lock().read_line(&mut line).unwrap();
+        let tokens = tokenizer::tokenize(&line);
+        println!("tokens: {:#?}", tokens);
+    }
 }
 
 #[cfg(test)]
