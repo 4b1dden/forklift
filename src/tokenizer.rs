@@ -1,6 +1,6 @@
 use std::str;
 
-#[derive(PartialEq, Debug, PartialOrd)]
+#[derive(Clone, PartialEq, Debug, PartialOrd)]
 pub enum TokenKind {
     // primitive types
     Identifier(String),
@@ -22,6 +22,9 @@ pub enum TokenKind {
     Minus,
     Slash,
     Asterisk,
+    Bang,
+
+    Root,
 }
 
 pub struct Lexer<'a> {
@@ -29,7 +32,7 @@ pub struct Lexer<'a> {
     pub position: usize,
 }
 
-#[derive(Debug, PartialEq, PartialOrd)]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct LexedToken {
     pub kind: TokenKind,
     pub index_start: usize,

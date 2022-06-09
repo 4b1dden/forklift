@@ -1,5 +1,6 @@
 use std::io::{self, BufRead};
 
+mod parser;
 mod tokenizer;
 
 fn main() {
@@ -18,7 +19,6 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use crate::tokenizer::{tokenize, LexedToken, Lexer, LexerResult, TokenKind};
-
     fn mock_lexed_token(kind: TokenKind, start: usize) -> LexedToken {
         LexedToken {
             kind,
