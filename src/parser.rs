@@ -108,6 +108,55 @@ fn sequence_of() {
     todo!()
 }
 
+fn any_of_monomorphic<'a, P, R>(parsers: Vec<P>) -> impl Parser<'a, R>
+where
+    P: Parser<'a, R>,
+{
+    move |input| {
+        for parser in parsers.iter() {
+            let result = parser.parse(input);
+            if let (Ok(_)) = result {
+                return result;
+            }
+        }
+
+        Err(String::from(
+            "none of the provided parsers matched in any_of_monomorphic",
+        ))
+    }
+}
+
+fn bin_op<'a>() -> impl Parser<'a, &'a str> {
+    let operands = vec!["+", "-", "/", "*"];
+    any_of_monomorphic(
+        operands
+            .iter()
+            .map(|op_str| parse_literal(op_str.clone()))
+            .collect(),
+    )
+}
+
+fn triplet<'a, P1, P2, P3, R1, R2, R3>(
+    parser1: P1,
+    parser2: P2,
+    parser3: P3,
+) -> impl Parser<'a, (R1, R2, R3)>
+where
+    P1: Parser<'a, R1>,
+    P2: Parser<'a, R2>,
+    P3: Parser<'a, R3>,
+{
+    move |input| {
+        parser1.parse(input).and_then(|(rest1, result1)| {
+            parser2.parse(rest1).and_then(|(rest2, result2)| {
+                parser3
+                    .parse(rest2)
+                    .map(|(rest3, result3)| (rest3, (result1, result2, result3)))
+            })
+        })
+    }
+}
+
 fn next_char(input: &str) -> ParseResult<char> {
     input
         .chars()
@@ -164,6 +213,16 @@ fn optional_whitespace<'a>() -> impl Parser<'a, Vec<char>> {
     zero_or_more(parse_whitespace())
 }
 
+fn trim_whitespace_around<'a, P, R>(parser: P) -> impl Parser<'a, R>
+where
+    P: Parser<'a, R>,
+{
+    map(
+        triplet(optional_whitespace(), parser, optional_whitespace()),
+        |(_, inside_result, _)| inside_result,
+    )
+}
+
 fn right<'a, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, R2>
 where
     P1: Parser<'a, R1>,
@@ -174,9 +233,13 @@ where
 
 #[cfg(test)]
 mod tests {
+
+    use crate::parser::bin_op;
+
     use super::{
-        at_least_one_whitespace, left, map, one_or_more, optional_whitespace, pair, parse_literal,
-        parse_number, predicate, right, zero_or_more, GrammarItem, Parser,
+        any_of_monomorphic, at_least_one_whitespace, left, map, one_or_more, optional_whitespace,
+        pair, parse_literal, parse_number, predicate, right, trim_whitespace_around, triplet,
+        zero_or_more, GrammarItem, Parser,
     };
 
     #[test]
@@ -302,29 +365,34 @@ mod tests {
     #[test]
     fn test_plus_seq() {
         // todo:compose properly
-        fn plus_seq<'a>() -> impl Parser<'a, String> {
-            let lhs_number = left(
-                right(optional_whitespace(), parse_number),
-                optional_whitespace(),
-            );
-            let bin_op = left(parse_literal("+"), optional_whitespace());
-            return map(
-                pair(
-                    map(pair(lhs_number, bin_op), |(num, op)| {
-                        format!("{} {}", num, op)
-                    }),
-                    parse_number,
-                ),
-                |(acc, new_num)| format!("{} {}", acc, new_num),
-            );
-            //left(lhs_number, bin_op)
+        fn plus_seq<'a>() -> impl Parser<'a, (&'a str, &'a str, &'a str)> {
+            let lhs_number = trim_whitespace_around(parse_number);
+            let bin_op = trim_whitespace_around(bin_op());
+            let rhs_number = trim_whitespace_around(parse_number);
+
+            triplet(lhs_number, bin_op, rhs_number)
         }
 
         let parser = plus_seq();
 
-        let src = "1 +   2";
+        println!("{:#?}", parser.parse("   1 + 2  "));
+        println!("{:#?}", parser.parse("   32 - 45  "));
+        println!("{:#?}", parser.parse("   4 / 2  "));
+        println!("{:#?}", parser.parse("   15 * 3  "));
+    }
 
-        let result = parser.parse(src);
-        println!("{:#?}", result);
+    #[test]
+    fn test_any_of_monomorphic() {
+        let combined_any_parser = any_of_monomorphic(vec![
+            parse_literal("1"),
+            parse_literal("2"),
+            parse_literal("3"),
+        ]);
+
+        assert_eq!(("foo", "1"), combined_any_parser.parse("1foo").unwrap());
+        assert_eq!(("foo", "2"), combined_any_parser.parse("2foo").unwrap());
+        assert_eq!(("foo", "3"), combined_any_parser.parse("3foo").unwrap());
+
+        assert!(combined_any_parser.parse("4foo").is_err());
     }
 }
