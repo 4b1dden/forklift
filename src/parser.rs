@@ -7,48 +7,52 @@ pub enum GrammarItem {
 
 type ParseResult<'a, T> = Result<(&'a str, T), String>;
 
-fn parse_number(input: &str) -> ParseResult<&str> {
-    let mut idx: usize = 0;
+fn parse_number<'a>() -> impl Parser<'a, &'a str> {
+    move |input: &'a str| {
+        let mut idx: usize = 0;
 
-    while let Some(ch) = input.chars().nth(idx) {
-        if ch.is_digit(10) {
-            idx += 1;
-        } else {
-            break;
+        while let Some(ch) = input.chars().nth(idx) {
+            if ch.is_digit(10) {
+                idx += 1;
+            } else {
+                break;
+            }
         }
-    }
 
-    Ok((&input[idx..], &input[..idx]))
+        Ok((&input[idx..], &input[..idx]))
+    }
 }
 
-fn parse_identifier(input: &str) -> ParseResult<String> {
-    let mut matched = String::new();
-    let mut chars = input.chars();
+fn parse_identifier<'a>() -> impl Parser<'a, &'a str> {
+    move |input: &'a str| {
+        let mut matched_count: usize = 0;
+        let mut chars = input.chars();
 
-    if let Some(next) = chars.next() {
-        if next.is_alphabetic() || next == '_' {
-            matched.push(next);
+        if let Some(next) = chars.next() {
+            if next.is_alphabetic() || next == '_' {
+                matched_count += 1;
+            } else {
+                return Err(String::from(
+                    "Identifier can not start with a non alphabetic character",
+                ));
+            }
         } else {
-            return Err(String::from(
-                "Identifier can not start with a non alphabetic character",
-            ));
+            return Err(String::from("UnexpectedEOF"));
         }
-    } else {
-        return Err(String::from("UnexpectedEOF"));
-    }
 
-    while let Some(next) = chars.next() {
-        if next.is_alphanumeric() || next == '_' {
-            matched.push(next);
-        } else {
-            break;
+        while let Some(next) = chars.next() {
+            if next.is_alphanumeric() || next == '_' {
+                matched_count += 1;
+            } else {
+                break;
+            }
         }
-    }
 
-    Ok((&input[matched.len()..], matched))
+        Ok((&input[matched_count..], &input[..matched_count]))
+    }
 }
 
-trait Parser<'a, Output> {
+pub trait Parser<'a, Output> {
     fn parse(&self, input: &'a str) -> ParseResult<'a, Output>;
 
     fn map<F, MOut>(self, map_fn: F) -> BoxedParser<'a, MOut>
@@ -102,16 +106,43 @@ impl From<&str> for BinaryOperator {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
     Literal(LiteralExpr),
     Binary(BinaryExpr),
 }
 
-#[derive(Clone, Debug)]
-pub struct LiteralExpr(i32);
+fn either<'a, P1, P2, A>(parser1: P1, parser2: P2) -> impl Parser<'a, A>
+where
+    P1: Parser<'a, A>,
+    P2: Parser<'a, A>,
+{
+    move |input| match parser1.parse(input) {
+        ok @ Ok(_) => ok,
+        Err(_) => parser2.parse(input),
+    }
+}
 
-#[derive(Clone, Debug)]
+pub fn parse_expr_literal<'a>() -> impl Parser<'a, Expr> {
+    let identifier_parser = parse_identifier()
+        .map(|ident| Expr::Literal(LiteralExpr::StringLiteral(ident.to_string())));
+    let number_parser =
+        parse_number().map(|num| Expr::Literal(LiteralExpr::NumberLiteral(num.parse().unwrap())));
+
+    either(identifier_parser, number_parser)
+}
+
+// pub fn parse_expr<'a>(input: &str) -> impl Parser<'a, Expr> {
+//     either(parse_
+// }
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum LiteralExpr {
+    StringLiteral(String),
+    NumberLiteral(i32),
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub struct BinaryExpr {
     pub lhs: Box<Expr>,
     pub op: BinaryOperator,
@@ -358,9 +389,9 @@ where
 
 // Todo: add parentheses
 fn parse_binary_expression<'a>() -> impl Parser<'a, (&'a str, Vec<(BinaryOperator, &'a str)>)> {
-    let lhs_number = trim_whitespace_around(parse_number);
+    let lhs_number = trim_whitespace_around(parse_number());
     let bin_op = trim_whitespace_around(bin_operand()).map(|op| BinaryOperator::from(op));
-    let rhs_number = trim_whitespace_around(parse_number);
+    let rhs_number = trim_whitespace_around(parse_number());
 
     let rhs_parser = pair(bin_op, rhs_number);
 
@@ -453,13 +484,15 @@ pub fn parse_binary_to_infix<'a>(
 ) -> Vec<BinExpInfix> {
     let mut infix = vec![];
 
-    infix.push(BinExpInfix::Literal(LiteralExpr(
+    infix.push(BinExpInfix::Literal(LiteralExpr::NumberLiteral(
         result.1 .0.parse().unwrap(),
     )));
 
     for item in result.1 .1.iter() {
         infix.push(BinExpInfix::Op(item.0.clone()));
-        infix.push(BinExpInfix::Literal(LiteralExpr(item.1.parse().unwrap())));
+        infix.push(BinExpInfix::Literal(LiteralExpr::NumberLiteral(
+            item.1.parse().unwrap(),
+        )));
     }
 
     infix
@@ -470,15 +503,15 @@ mod tests {
     use super::{
         any_of_monomorphic, at_least_one_whitespace, bin_operand, infix_to_ast, left, map,
         one_or_more, optional_whitespace, pair, parse_binary_expression, parse_binary_to_infix,
-        parse_identifier, parse_literal, parse_number, predicate, right, trim_whitespace_around,
-        triplet, zero_or_more, BinExpInfix, BinaryExpr, BinaryOperator, Expr, GrammarItem,
-        LiteralExpr, Parser,
+        parse_expr_literal, parse_identifier, parse_literal, parse_number, predicate, right,
+        trim_whitespace_around, triplet, zero_or_more, BinExpInfix, BinaryExpr, BinaryOperator,
+        Expr, GrammarItem, LiteralExpr, Parser,
     };
 
     #[test]
     fn test_parse_number() {
         let src = "12 foo";
-        let result = parse_number(src).unwrap();
+        let result = parse_number().parse(src).unwrap();
 
         assert_eq!((" foo", "12"), result);
     }
@@ -486,12 +519,12 @@ mod tests {
     #[test]
     fn test_parse_identifier() {
         let src = "foo_bar123";
-        let result = parse_identifier(src).unwrap();
+        let result = parse_identifier().parse(src).unwrap();
 
-        assert_eq!(("", String::from("foo_bar123")), result);
+        assert_eq!(("", "foo_bar123"), result);
 
-        assert!(parse_identifier("123foo_bar").is_err());
-        assert!(parse_identifier("_foo_bar123").is_ok());
+        assert!(parse_identifier().parse("123foo_bar").is_err());
+        assert!(parse_identifier().parse("_foo_bar123").is_ok());
     }
 
     #[test]
@@ -506,7 +539,7 @@ mod tests {
 
     #[test]
     fn test_pair_parser() {
-        let combined_parser = pair(parse_literal("("), parse_number);
+        let combined_parser = pair(parse_literal("("), parse_number());
         let src = "(130 + 15)";
 
         let result = combined_parser.parse(src).unwrap();
@@ -521,7 +554,7 @@ mod tests {
         }
 
         let src = "130 150";
-        let combined_parser = map(parse_number, mapper);
+        let combined_parser = map(parse_number(), mapper);
 
         let result = combined_parser.parse(src).unwrap();
 
@@ -531,7 +564,7 @@ mod tests {
     #[test]
     fn test_left() {
         let src = "joe130";
-        let parser = left(parse_literal("joe"), parse_number);
+        let parser = left(parse_literal("joe"), parse_number());
 
         let result = parser.parse(src).unwrap();
 
@@ -541,7 +574,7 @@ mod tests {
     #[test]
     fn test_right() {
         let src = "joe130";
-        let parser = right(parse_literal("joe"), parse_number);
+        let parser = right(parse_literal("joe"), parse_number());
 
         let result = parser.parse(src).unwrap();
 
@@ -584,7 +617,7 @@ mod tests {
     #[test]
     fn test_any_char_and_pred() {
         let src = "1234 foo";
-        let four_digit_num = predicate(parse_number, |num| num.len() == 4);
+        let four_digit_num = predicate(parse_number(), |num| num.len() == 4);
 
         let result = four_digit_num.parse(src);
 
@@ -654,5 +687,22 @@ mod tests {
         assert_eq!(("foo", "3"), combined_any_parser.parse("3foo").unwrap());
 
         assert!(combined_any_parser.parse("4foo").is_err());
+    }
+
+    #[test]
+    fn test_parse_expr_literal() {
+        let parser = parse_expr_literal();
+
+        assert_eq!(
+            parser.parse("foo").unwrap(),
+            (
+                "",
+                Expr::Literal(LiteralExpr::StringLiteral(String::from("foo")))
+            )
+        );
+        assert_eq!(
+            parser.parse("123").unwrap(),
+            ("", Expr::Literal(LiteralExpr::NumberLiteral(123)))
+        );
     }
 }
