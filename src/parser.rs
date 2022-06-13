@@ -21,6 +21,33 @@ fn parse_number(input: &str) -> ParseResult<&str> {
     Ok((&input[idx..], &input[..idx]))
 }
 
+fn parse_identifier(input: &str) -> ParseResult<String> {
+    let mut matched = String::new();
+    let mut chars = input.chars();
+
+    if let Some(next) = chars.next() {
+        if next.is_alphabetic() || next == '_' {
+            matched.push(next);
+        } else {
+            return Err(String::from(
+                "Identifier can not start with a non alphabetic character",
+            ));
+        }
+    } else {
+        return Err(String::from("UnexpectedEOF"));
+    }
+
+    while let Some(next) = chars.next() {
+        if next.is_alphanumeric() || next == '_' {
+            matched.push(next);
+        } else {
+            break;
+        }
+    }
+
+    Ok((&input[matched.len()..], matched))
+}
+
 trait Parser<'a, Output> {
     fn parse(&self, input: &'a str) -> ParseResult<'a, Output>;
 
@@ -443,9 +470,9 @@ mod tests {
     use super::{
         any_of_monomorphic, at_least_one_whitespace, bin_operand, infix_to_ast, left, map,
         one_or_more, optional_whitespace, pair, parse_binary_expression, parse_binary_to_infix,
-        parse_literal, parse_number, predicate, right, trim_whitespace_around, triplet,
-        zero_or_more, BinExpInfix, BinaryExpr, BinaryOperator, Expr, GrammarItem, LiteralExpr,
-        Parser,
+        parse_identifier, parse_literal, parse_number, predicate, right, trim_whitespace_around,
+        triplet, zero_or_more, BinExpInfix, BinaryExpr, BinaryOperator, Expr, GrammarItem,
+        LiteralExpr, Parser,
     };
 
     #[test]
@@ -454,6 +481,17 @@ mod tests {
         let result = parse_number(src).unwrap();
 
         assert_eq!((" foo", "12"), result);
+    }
+
+    #[test]
+    fn test_parse_identifier() {
+        let src = "foo_bar123";
+        let result = parse_identifier(src).unwrap();
+
+        assert_eq!(("", String::from("foo_bar123")), result);
+
+        assert!(parse_identifier("123foo_bar").is_err());
+        assert!(parse_identifier("_foo_bar123").is_ok());
     }
 
     #[test]
