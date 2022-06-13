@@ -132,9 +132,10 @@ pub fn parse_expr_literal<'a>() -> impl Parser<'a, Expr> {
     either(identifier_parser, number_parser)
 }
 
-// pub fn parse_expr<'a>(input: &str) -> impl Parser<'a, Expr> {
-//     either(parse_
-// }
+pub fn parse_expr<'a>() -> impl Parser<'a, Expr> {
+    // todo: impl fully
+    parse_expr_literal()
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum LiteralExpr {
@@ -388,10 +389,10 @@ where
 }
 
 // Todo: add parentheses
-fn parse_binary_expression<'a>() -> impl Parser<'a, (&'a str, Vec<(BinaryOperator, &'a str)>)> {
-    let lhs_number = trim_whitespace_around(parse_number());
+fn parse_binary_expression<'a>() -> impl Parser<'a, (Expr, Vec<(BinaryOperator, Expr)>)> {
+    let lhs_number = trim_whitespace_around(parse_expr());
     let bin_op = trim_whitespace_around(bin_operand()).map(|op| BinaryOperator::from(op));
-    let rhs_number = trim_whitespace_around(parse_number());
+    let rhs_number = trim_whitespace_around(parse_expr());
 
     let rhs_parser = pair(bin_op, rhs_number);
 
@@ -480,19 +481,19 @@ fn add_node(stack: &mut Vec<ASTNode>, op: BinaryOperator) {
 
 // Todo: get rid of this completely
 pub fn parse_binary_to_infix<'a>(
-    result: (&'a str, (&'a str, Vec<(BinaryOperator, &'a str)>)),
+    result: (&'a str, (Expr, Vec<(BinaryOperator, Expr)>)),
 ) -> Vec<BinExpInfix> {
     let mut infix = vec![];
 
-    infix.push(BinExpInfix::Literal(LiteralExpr::NumberLiteral(
-        result.1 .0.parse().unwrap(),
-    )));
+    if let Expr::Literal(literal_expr) = result.1 .0 {
+        infix.push(BinExpInfix::Literal(literal_expr));
+    }
 
     for item in result.1 .1.iter() {
         infix.push(BinExpInfix::Op(item.0.clone()));
-        infix.push(BinExpInfix::Literal(LiteralExpr::NumberLiteral(
-            item.1.parse().unwrap(),
-        )));
+        if let Expr::Literal(literal_expr) = &item.1 {
+            infix.push(BinExpInfix::Literal(literal_expr.clone()));
+        }
     }
 
     infix
@@ -507,6 +508,10 @@ mod tests {
         trim_whitespace_around, triplet, zero_or_more, BinExpInfix, BinaryExpr, BinaryOperator,
         Expr, GrammarItem, LiteralExpr, Parser,
     };
+
+    fn mock_number_literal_expr(num: i32) -> Expr {
+        Expr::Literal(LiteralExpr::NumberLiteral(num))
+    }
 
     #[test]
     fn test_parse_number() {
@@ -650,11 +655,11 @@ mod tests {
             (
                 "",
                 (
-                    "3",
+                    mock_number_literal_expr(3),
                     vec![
-                        (BinaryOperator::Mul, "100"),
-                        (BinaryOperator::Plus, "4"),
-                        (BinaryOperator::Mul, "2")
+                        (BinaryOperator::Mul, mock_number_literal_expr(100)),
+                        (BinaryOperator::Plus, mock_number_literal_expr(4)),
+                        (BinaryOperator::Mul, mock_number_literal_expr(2))
                     ]
                 )
             ),
