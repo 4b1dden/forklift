@@ -212,28 +212,39 @@ where
 }
 
 // Todo: add parentheses
-pub fn parse_binary_expression<'a>() -> impl Parser<'a, (Expr, Vec<(BinaryOperator, Expr)>)> {
+pub fn parse_binary_expression<'a>() -> impl Parser<'a, Expr> {
     let lhs_number = trim_whitespace_around(parse_expr());
     let bin_op = trim_whitespace_around(bin_operand()).map(|op| BinaryOperator::from(op));
     let rhs_number = trim_whitespace_around(parse_expr());
 
     let rhs_parser = pair(bin_op, rhs_number);
 
-    return pair(lhs_number, one_or_more(rhs_parser));
+    return pair(lhs_number, one_or_more(rhs_parser))
+        .map(|(base_expr, tuples)| flatten_bin_expr_to_infix(base_expr, tuples))
+        .map(|infix_exprs| fold_infix_binary_to_single_expr(infix_exprs));
+}
+
+fn flatten_bin_expr_to_infix(
+    base_expr: Expr,
+    tuples: Vec<(BinaryOperator, Expr)>,
+) -> Vec<BinExpInfix> {
+    let mut result = vec![];
+
+    result.push(BinExpInfix::Expr(base_expr));
+
+    for (binary_operator, expr) in tuples.into_iter() {
+        result.push(BinExpInfix::Op(binary_operator));
+        result.push(BinExpInfix::Expr(expr));
+    }
+
+    result
 }
 
 // TODO: get rid of this
 #[derive(Debug)]
 pub enum BinExpInfix {
-    Literal(LiteralExpr),
+    Expr(Expr),
     Op(BinaryOperator),
-}
-
-#[derive(Debug)]
-pub struct ASTNode {
-    pub left: Option<Box<ASTNode>>,
-    pub right: Option<Box<ASTNode>>,
-    pub val: BinExpInfix,
 }
 
 fn get_single_operator_precedence(op: &BinaryOperator) -> i32 {
@@ -256,18 +267,14 @@ fn compare_operator_precedence(op1: &BinaryOperator, op2: &BinaryOperator) -> i3
 /// https://en.wikipedia.org/wiki/Shunting_yard_algorithm
 /// thank mr dijsktra
 /// https://www.klittlepage.com/2013/12/22/twelve-days-2013-shunting-yard-algorithm/
-pub fn infix_to_ast(infix: Vec<BinExpInfix>) -> ASTNode {
+pub fn fold_infix_binary_to_single_expr(infix: Vec<BinExpInfix>) -> Expr {
     let mut operator_stack = vec![];
-    let mut operand_stack: Vec<ASTNode> = vec![];
+    let mut operand_stack: Vec<Expr> = vec![];
 
     for infix_item in infix.iter() {
         match infix_item {
-            BinExpInfix::Literal(literal) => {
-                operand_stack.push(ASTNode {
-                    left: None,
-                    right: None,
-                    val: BinExpInfix::Literal(literal.clone()),
-                });
+            BinExpInfix::Expr(literal) => {
+                operand_stack.push(literal.clone());
             }
             BinExpInfix::Op(operator1) => {
                 while let Some(top) = operator_stack.last() {
@@ -292,34 +299,14 @@ pub fn infix_to_ast(infix: Vec<BinExpInfix>) -> ASTNode {
     operand_stack.pop().unwrap()
 }
 
-fn add_node(stack: &mut Vec<ASTNode>, op: BinaryOperator) {
+fn add_node(stack: &mut Vec<Expr>, op: BinaryOperator) {
     let right = stack.pop().unwrap();
     let left = stack.pop().unwrap();
-    stack.push(ASTNode {
-        left: Some(Box::new(left)),
-        right: Some(Box::new(right)),
-        val: BinExpInfix::Op(op),
-    });
-}
-
-// Todo: get rid of this completely
-pub fn parse_binary_to_infix<'a>(
-    result: (&'a str, (Expr, Vec<(BinaryOperator, Expr)>)),
-) -> Vec<BinExpInfix> {
-    let mut infix = vec![];
-
-    if let Expr::Literal(literal_expr) = result.1 .0 {
-        infix.push(BinExpInfix::Literal(literal_expr));
-    }
-
-    for item in result.1 .1.iter() {
-        infix.push(BinExpInfix::Op(item.0.clone()));
-        if let Expr::Literal(literal_expr) = &item.1 {
-            infix.push(BinExpInfix::Literal(literal_expr.clone()));
-        }
-    }
-
-    infix
+    stack.push(Expr::Binary(BinaryExpr {
+        lhs: Box::new(left),
+        op,
+        rhs: Box::new(right),
+    }));
 }
 
 #[cfg(test)]

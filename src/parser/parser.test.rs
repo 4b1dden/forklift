@@ -1,7 +1,7 @@
 use crate::parser::{
-    any_of_monomorphic, at_least_one_whitespace, infix_to_ast, map, parse_binary_expression,
-    parse_binary_to_infix, parse_expr_literal, parse_literal, parse_number, predicate,
-    BinaryOperator, Expr, LiteralExpr, Parser,
+    any_of_monomorphic, at_least_one_whitespace, fold_infix_binary_to_single_expr, map,
+    parse_binary_expression, parse_expr_literal, parse_literal, parse_number, predicate,
+    BinaryExpr, BinaryOperator, Expr, LiteralExpr, Parser,
 };
 
 fn mock_number_literal_expr(num: i32) -> Expr {
@@ -57,29 +57,22 @@ fn test_parse_binary_expression() {
     assert_eq!(
         (
             "",
-            (
-                mock_number_literal_expr(3),
-                vec![
-                    (BinaryOperator::Mul, mock_number_literal_expr(100)),
-                    (BinaryOperator::Plus, mock_number_literal_expr(4)),
-                    (BinaryOperator::Mul, mock_number_literal_expr(2))
-                ]
-            )
+            (Expr::Binary(BinaryExpr {
+                lhs: Box::new(Expr::Binary(BinaryExpr {
+                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(3))),
+                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(100))),
+                    op: BinaryOperator::Mul
+                })),
+                rhs: Box::new(Expr::Binary(BinaryExpr {
+                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(4))),
+                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(2))),
+                    op: BinaryOperator::Mul
+                })),
+                op: BinaryOperator::Plus
+            }))
         ),
         result
     );
-}
-
-#[test]
-fn test_binary_expression_to_ast() {
-    let parser = parse_binary_expression();
-    let parsed = parser.parse(BINARY_EXPR_DEFAULT).unwrap();
-    let infix = parse_binary_to_infix(parsed);
-
-    let ast = infix_to_ast(infix);
-
-    println!("{:#?}", ast);
-    // TODO: write test case once ASTNode type semantics are stabilised
 }
 
 #[test]
