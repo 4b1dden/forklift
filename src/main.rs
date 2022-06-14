@@ -3,16 +3,23 @@ use std::io::{self, BufRead};
 mod parser;
 mod tokenizer;
 
+use crate::parser::Parser;
+
 fn main() {
     let mut line = String::new();
     let stdin = io::stdin();
 
-    while line.trim().to_lowercase() != "exit" {
+    while true {
         println!("fl >>>");
         line.clear();
         stdin.lock().read_line(&mut line).unwrap();
-        let tokens = tokenizer::tokenize(&line);
-        println!("tokens: {:#?}", tokens);
+
+        if line.trim().to_lowercase() != "exit" {
+            let expr = parser::parse_binary_expression().parse(&line);
+            println!("{:#?}", expr);
+        } else {
+            break;
+        }
     }
 }
 
