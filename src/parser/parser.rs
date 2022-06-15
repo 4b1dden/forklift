@@ -5,7 +5,9 @@ use crate::parser::{
     parse_number, right, triplet, zero_or_more,
 };
 
-type ParseResult<'a, T> = Result<(&'a str, T), String>;
+use super::{parse_identifier_as_expr, parse_number_as_expr};
+
+pub type ParseResult<'a, T> = Result<(&'a str, T), String>;
 
 pub trait Parser<'a, Output> {
     fn parse(&self, input: &'a str) -> ParseResult<'a, Output>;
@@ -68,25 +70,30 @@ pub enum Expr {
 }
 
 pub fn parse_expr_literal<'a>() -> impl Parser<'a, Expr> {
-    let identifier_parser =
-        parse_identifier().map(|ident| Expr::Literal(LiteralExpr::Identifier(ident.to_string())));
-    let number_parser =
-        parse_number().map(|num| Expr::Literal(LiteralExpr::NumberLiteral(num.parse().unwrap())));
-
-    either(identifier_parser, number_parser)
+    either(parse_identifier_as_expr(), parse_number_as_expr())
 }
 
-pub fn parse_expr<'a>() -> impl Parser<'a, Expr> {
+pub fn parse_single_statement<'a>() -> impl Parser<'a, Expr> {
     // todo: impl fully
+    // expr_literal | ... ?
     parse_expr_literal()
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum LiteralExpr {
-    Identifier(String),
-    StringLiteral(String),
-    NumberLiteral(i32),
+    Identifier(Identifier),
+    StringLiteral(StringLiteral),
+    NumberLiteral(Number),
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Identifier(pub String);
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct StringLiteral(pub String);
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Number(pub i32);
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BinaryExpr {
@@ -214,9 +221,9 @@ where
 
 // Todo: add parentheses
 pub fn parse_binary_expression<'a>() -> impl Parser<'a, Expr> {
-    let lhs_number = trim_whitespace_around(parse_expr());
+    let lhs_number = trim_whitespace_around(parse_single_statement());
     let bin_op = trim_whitespace_around(bin_operand()).map(|op| BinaryOperator::from(op));
-    let rhs_number = trim_whitespace_around(parse_expr());
+    let rhs_number = trim_whitespace_around(parse_single_statement());
 
     let rhs_parser = pair(bin_op, rhs_number);
 

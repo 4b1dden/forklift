@@ -1,4 +1,4 @@
-use crate::parser::Parser;
+use crate::parser::{Expr, Identifier, LiteralExpr, Number, Parser};
 
 pub fn parse_number<'a>() -> impl Parser<'a, &'a str> {
     move |input: &'a str| {
@@ -45,11 +45,21 @@ pub fn parse_identifier<'a>() -> impl Parser<'a, &'a str> {
     }
 }
 
-pub fn parse_literal<'a>(literal: &'a str) -> impl Parser<'a, &str> {
+pub fn parse_identifier_as_expr<'a>() -> impl Parser<'a, Expr> {
+    parse_identifier()
+        .map(|ident| Expr::Literal(LiteralExpr::Identifier(Identifier(ident.to_string()))))
+}
+
+pub fn parse_number_as_expr<'a>() -> impl Parser<'a, Expr> {
+    parse_number()
+        .map(|num| Expr::Literal(LiteralExpr::NumberLiteral(Number(num.parse().unwrap()))))
+}
+
+pub fn parse_literal<'a>(literal: &'a str) -> impl Parser<'a, &'a str> {
     move |input: &'a str| match input.get(0..literal.len()) {
         Some(substr) => {
             if substr == literal {
-                Ok((&input[substr.len()..], substr))
+                Ok((&input[substr.len()..], &input[..substr.len()]))
             } else {
                 Err(format!("expected {}, got {}", literal.to_string(), substr))
             }
@@ -58,6 +68,14 @@ pub fn parse_literal<'a>(literal: &'a str) -> impl Parser<'a, &str> {
     }
 }
 
+// TODO: figure out if this is the best structure
+// maybe we want this to be a part of some wider "Statement" enum?
+pub struct LetAssignment {
+    identifier: LiteralExpr,
+    rhs: Expr,
+}
+
+// fn parse_let_binding<'a>() -> impl Parser<'a, Expr> {}
 #[cfg(test)]
 #[path = "primitives.test.rs"]
 mod tests;

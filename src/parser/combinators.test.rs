@@ -1,4 +1,7 @@
-use crate::parser::{left, right, parse_literal, parse_number, one_or_more, zero_or_more, pair, Parser};
+use crate::parser::{
+    left, one_or_more, pair, parse_literal, parse_number, right, sequence_of_monomorphic,
+    zero_or_more, Parser,
+};
 
 #[test]
 fn test_left() {
@@ -61,4 +64,16 @@ fn test_pair_parser() {
     let result = combined_parser.parse(src).unwrap();
 
     assert_eq!((" + 15)", ("(", "130")), result);
+}
+
+#[test]
+fn test_sequence_of_monomorphic<'a>() {
+    let src = "foo123bar.";
+
+    let parsers = parse_literal("foo").and_then(|_| parse_number());
+    // let parser = parsers.parse(src)
+    // sequence_of_monomorphic .. ;
+    let result = parsers.parse(src);
+
+    println!("{:#?}", result);
 }

@@ -1,11 +1,11 @@
 use crate::parser::{
     any_of_monomorphic, at_least_one_whitespace, fold_infix_binary_to_single_expr, map,
     parse_binary_expression, parse_expr_literal, parse_literal, parse_number, predicate,
-    BinaryExpr, BinaryOperator, Expr, LiteralExpr, Parser,
+    BinaryExpr, BinaryOperator, Expr, Identifier, LiteralExpr, Number, Parser, StringLiteral,
 };
 
 fn mock_number_literal_expr(num: i32) -> Expr {
-    Expr::Literal(LiteralExpr::NumberLiteral(num))
+    Expr::Literal(LiteralExpr::NumberLiteral(Number(num)))
 }
 
 #[test]
@@ -59,13 +59,13 @@ fn test_parse_binary_expression() {
             "",
             (Expr::Binary(BinaryExpr {
                 lhs: Box::new(Expr::Binary(BinaryExpr {
-                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(3))),
-                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(100))),
+                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(3)))),
+                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(100)))),
                     op: BinaryOperator::Mul
                 })),
                 rhs: Box::new(Expr::Binary(BinaryExpr {
-                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(4))),
-                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(2))),
+                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(4)))),
+                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))),
                     op: BinaryOperator::Mul
                 })),
                 op: BinaryOperator::Plus
@@ -98,11 +98,11 @@ fn test_parse_expr_literal() {
         parser.parse("foo").unwrap(),
         (
             "",
-            Expr::Literal(LiteralExpr::StringLiteral(String::from("foo")))
+            Expr::Literal(LiteralExpr::Identifier(Identifier(String::from("foo"))))
         )
     );
     assert_eq!(
         parser.parse("123").unwrap(),
-        ("", Expr::Literal(LiteralExpr::NumberLiteral(123)))
+        ("", Expr::Literal(LiteralExpr::NumberLiteral(Number(123))))
     );
 }
