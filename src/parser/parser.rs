@@ -68,8 +68,8 @@ pub enum Expr {
 }
 
 pub fn parse_expr_literal<'a>() -> impl Parser<'a, Expr> {
-    let identifier_parser = parse_identifier()
-        .map(|ident| Expr::Literal(LiteralExpr::StringLiteral(ident.to_string())));
+    let identifier_parser =
+        parse_identifier().map(|ident| Expr::Literal(LiteralExpr::Identifier(ident.to_string())));
     let number_parser =
         parse_number().map(|num| Expr::Literal(LiteralExpr::NumberLiteral(num.parse().unwrap())));
 
@@ -83,6 +83,7 @@ pub fn parse_expr<'a>() -> impl Parser<'a, Expr> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum LiteralExpr {
+    Identifier(String),
     StringLiteral(String),
     NumberLiteral(i32),
 }

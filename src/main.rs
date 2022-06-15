@@ -3,7 +3,16 @@ use std::io::{self, BufRead};
 mod parser;
 mod tokenizer;
 
+use parser::{either, Expr};
+
 use crate::parser::Parser;
+
+fn parse_statement<'a>() -> impl Parser<'a, Expr> {
+    either(
+        parser::parse_binary_expression(),
+        parser::parse_expr_literal(),
+    )
+}
 
 fn main() {
     let mut line = String::new();
@@ -15,7 +24,7 @@ fn main() {
         stdin.lock().read_line(&mut line).unwrap();
 
         if line.trim().to_lowercase() != "exit" {
-            let expr = parser::parse_binary_expression().parse(&line);
+            let expr = parse_statement().parse(&line);
             println!("{:#?}", expr);
         } else {
             break;
