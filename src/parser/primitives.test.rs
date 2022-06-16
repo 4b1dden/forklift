@@ -1,4 +1,7 @@
-use crate::parser::{parse_identifier, parse_literal, parse_number, Parser};
+use crate::parser::{
+    parse_identifier, parse_let_binding, parse_literal, parse_number, BinaryExpr, BinaryOperator,
+    Expr, Identifier, LetAssignment, LiteralExpr, Number, Parser,
+};
 
 #[test]
 fn test_parse_number() {
@@ -27,4 +30,34 @@ fn test_parse_lparen() {
     let result = lparen_parser.parse(src).unwrap();
 
     assert_eq!(("12 + 3)", "("), result);
+}
+
+#[test]
+fn test_parse_let_binding() {
+    let src = "let foo = 1 + 2";
+    let parser = parse_let_binding();
+
+    assert_eq!(
+        parser.parse(src).unwrap(),
+        (
+            "",
+            LetAssignment {
+                identifier: Expr::Literal(LiteralExpr::Identifier(Identifier(String::from("foo")))),
+                rhs: Expr::Binary(BinaryExpr {
+                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(1)))),
+                    op: BinaryOperator::Plus,
+                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))),
+                })
+            }
+        )
+    );
+
+    assert_eq!(
+        parser.parse("let foo  1 + 2"),
+        Err(String::from("expected =, got 1"))
+    );
+    assert_eq!(
+        parser.parse("foo = 1 + 2"),
+        Err(String::from("expected let, got foo"))
+    );
 }

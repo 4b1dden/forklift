@@ -83,7 +83,15 @@ pub fn parse_single_statement<'a>() -> impl Parser<'a, Expr> {
 pub enum LiteralExpr {
     Identifier(Identifier),
     StringLiteral(StringLiteral),
+    Keyword(Keywords),
     NumberLiteral(Number),
+    // TODO: this is not good for sure
+    Empty,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum Keywords {
+    Let,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -198,16 +206,16 @@ where
     }
 }
 
-pub fn parse_whitespace<'a>() -> impl Parser<'a, char> {
-    predicate(next_char, |c| c.is_whitespace()) // is_whitespace also matches "\n", "\t", etc...
+pub fn parse_whitespace<'a>() -> impl Parser<'a, ()> {
+    predicate(next_char, |c| c.is_whitespace()).map(|_| ()) // is_whitespace also matches "\n", "\t", etc...
 }
 
-pub fn at_least_one_whitespace<'a>() -> impl Parser<'a, Vec<char>> {
-    one_or_more(parse_whitespace())
+pub fn at_least_one_whitespace<'a>() -> impl Parser<'a, ()> {
+    one_or_more(parse_whitespace()).map(|_| ())
 }
 
-pub fn optional_whitespace<'a>() -> impl Parser<'a, Vec<char>> {
-    zero_or_more(parse_whitespace())
+pub fn optional_whitespace<'a>() -> impl Parser<'a, ()> {
+    zero_or_more(parse_whitespace()).map(|_| ())
 }
 
 pub fn trim_whitespace_around<'a, P, R>(parser: P) -> impl Parser<'a, R>

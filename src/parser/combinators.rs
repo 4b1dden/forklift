@@ -97,12 +97,15 @@ where
 
         for parser in parsers.iter() {
             let res = parser.parse(rest);
-            if res.is_err() {
-                return Err(String::from("Unexpected sequence"));
-            } else {
-                let (remaining, matched) = res.unwrap();
-                rest = remaining;
-                results.push(matched);
+
+            match res {
+                Ok((remaining, matched)) => {
+                    rest = remaining;
+                    results.push(matched);
+                }
+                Err(err_str) => {
+                    return Err(err_str);
+                }
             }
         }
 

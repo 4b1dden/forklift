@@ -41,7 +41,7 @@ fn test_at_least_one_whitespace() {
 
     let result = parser.parse(src).unwrap();
 
-    assert_eq!(("foo = bar", vec![' ', ' ', ' ']), result);
+    assert_eq!(("foo = bar", ()), result);
 
     let src2 = "foo = bar";
     assert!(parser.parse(src2).is_err());
