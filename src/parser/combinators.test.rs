@@ -1,6 +1,6 @@
 use crate::parser::{
-    left, one_or_more, pair, parse_literal, parse_number, right, sequence_of_monomorphic,
-    zero_or_more, Parser,
+    either, left, one_or_more, pair, parse_literal, parse_number, right, sequence_of_monomorphic,
+    zero_or_more, BoxedParser, Parser,
 };
 
 #[test]
@@ -68,12 +68,21 @@ fn test_pair_parser() {
 
 #[test]
 fn test_sequence_of_monomorphic<'a>() {
-    let src = "foo123bar.";
+    let combined = sequence_of_monomorphic(vec![
+        BoxedParser::new(parse_literal("foo")),
+        BoxedParser::new(parse_number()),
+        BoxedParser::new(parse_literal("bar")),
+        BoxedParser::new(either(parse_literal("."), parse_literal("!"))),
+    ]);
 
-    let parsers = parse_literal("foo").and_then(|_| parse_number());
-    // let parser = parsers.parse(src)
-    // sequence_of_monomorphic .. ;
-    let result = parsers.parse(src);
+    assert_eq!(
+        combined.parse("foo123bar.").unwrap(),
+        ("", vec!["foo", "123", "bar", ".",])
+    );
+    assert_eq!(
+        combined.parse("foo123bar!").unwrap(),
+        ("", vec!["foo", "123", "bar", "!",])
+    );
 
-    println!("{:#?}", result);
+    assert!(combined.parse("foo123bar_").is_err());
 }

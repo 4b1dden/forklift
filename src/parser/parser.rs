@@ -119,7 +119,7 @@ pub struct BoxedParser<'a, Output> {
 }
 
 impl<'a, Output> BoxedParser<'a, Output> {
-    fn new<P>(parser: P) -> Self
+    pub fn new<P>(parser: P) -> Self
     where
         P: Parser<'a, Output> + 'a,
     {

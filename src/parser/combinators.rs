@@ -1,4 +1,6 @@
-use crate::parser::{map, ParseResult, Parser};
+use std::fmt::Debug;
+
+use crate::parser::{map, BoxedParser, ParseResult, Parser};
 
 pub fn either<'a, P1, P2, A>(parser1: P1, parser2: P2) -> impl Parser<'a, A>
 where
@@ -69,6 +71,9 @@ where
     P: Parser<'a, R>,
 {
     move |input| {
+        let mut results = Vec::<R>::new();
+        let mut rest = input;
+
         for parser in parsers.iter() {
             let result = parser.parse(input);
             if let (Ok(_)) = result {
@@ -82,42 +87,18 @@ where
     }
 }
 
-pub fn sequence_of_monomorphic<'a, P, R>(parsers: Vec<P>) -> impl Parser<'a, Vec<R>>
+pub fn sequence_of_monomorphic<'a, R>(parsers: Vec<BoxedParser<'a, R>>) -> impl Parser<'a, Vec<R>>
 where
-    P: Parser<'a, R> + 'a,
-    R: Clone,
+    R: Debug,
 {
-    /*
-        fn inner_loop<'a, 'b, P, R>(
-            parsers: &'b Vec<P>,
-            curr_parser_idx: usize,
-            input: &'a str,
-            mut accumulated_results: Vec<R>,
-        ) -> ParseResult<'a, Vec<R>>
-        where
-            P: Parser<'a, R>,
-            R: Clone,
-        {
-            if curr_parser_idx == parsers.len() {
-                return Ok((input, accumulated_results));
-            }
-
-            let (rest, result) = parsers.get(curr_parser_idx).unwrap().parse(input)?;
-            let mut new_results = accumulated_results.clone();
-            accumulated_results.push(result);
-
-            inner_loop(parsers, curr_parser_idx + 1, rest, accumulated_results)
-        }
-    */
-    move |input: &'a str| {
+    move |input| {
         let mut results = Vec::<R>::new();
         let mut rest = input;
 
         for parser in parsers.iter() {
             let res = parser.parse(rest);
-
             if res.is_err() {
-                return Err(String::from("err todo replace"));
+                return Err(String::from("Unexpected sequence"));
             } else {
                 let (remaining, matched) = res.unwrap();
                 rest = remaining;
