@@ -98,6 +98,7 @@ pub fn parse_let_binding<'a>() -> impl Parser<'a, LetBinding> {
             trim_whitespace_around(parse_literal("=")).map(|_| Expr::Literal(LiteralExpr::Empty)),
         ),
         BoxedParser::new(parse_statement()),
+        BoxedParser::new(parse_literal(";").map(|_| Expr::Literal(LiteralExpr::Empty))),
     ])
     .map(|results| LetBinding {
         identifier: results.get(2).unwrap().clone(),

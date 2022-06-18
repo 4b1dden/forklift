@@ -1,6 +1,7 @@
 use crate::parser::{
     any_of_monomorphic, either, either_polymorphic, parse_binary_expression, parse_expr_literal,
-    parse_let_binding, BoxedParser, Expr, Identifier, LetBinding, LiteralExpr, Parser,
+    parse_let_binding, trim_whitespace_around, zero_or_more, BoxedParser, Expr, Identifier,
+    LetBinding, LiteralExpr, Parser,
 };
 
 #[derive(Debug, Clone)]
@@ -28,15 +29,25 @@ pub fn parse_statement_as_expr<'a>() -> impl Parser<'a, Statement> {
 }
 
 pub fn parse_declaration<'a>() -> BoxedParser<'a, Declaration> {
-    either_polymorphic(
-        BoxedParser::new(parse_let_binding()),
-        BoxedParser::new(parse_statement_as_expr()),
+    trim_whitespace_around(
+        either_polymorphic(
+            BoxedParser::new(parse_let_binding()),
+            BoxedParser::new(parse_statement_as_expr()),
+        )
+        .map(|declaration_candidate| match declaration_candidate {
+            (Some(let_binding), None) => Declaration::Let(let_binding),
+            (None, Some(statement)) => Declaration::Statement(statement),
+            _ => todo!("err reporting here"),
+        }),
     )
-    .map(|declaration_candidate| match declaration_candidate {
-        (Some(let_binding), None) => Declaration::Let(let_binding),
-        (None, Some(statement)) => Declaration::Statement(statement),
-        _ => todo!("err reporting here"),
-    })
 }
 
 pub type Program = Vec<Declaration>;
+
+pub fn parse_program<'a>() -> impl Parser<'a, Program> {
+    zero_or_more(parse_declaration())
+}
+
+#[cfg(test)]
+#[path = "grammar.test.rs"]
+mod tests;

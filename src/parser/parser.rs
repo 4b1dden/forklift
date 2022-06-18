@@ -218,13 +218,15 @@ pub fn optional_whitespace<'a>() -> impl Parser<'a, ()> {
     zero_or_more(parse_whitespace()).map(|_| ())
 }
 
-pub fn trim_whitespace_around<'a, P, R>(parser: P) -> impl Parser<'a, R>
+pub fn trim_whitespace_around<'a, P, R>(parser: P) -> BoxedParser<'a, R>
 where
     P: Parser<'a, R> + 'a,
     R: 'a,
 {
-    triplet(optional_whitespace(), parser, optional_whitespace())
-        .map(|(_, inside_result, _)| inside_result)
+    BoxedParser::new(
+        triplet(optional_whitespace(), parser, optional_whitespace())
+            .map(|(_, inside_result, _)| inside_result),
+    )
 }
 
 // Todo: add parentheses

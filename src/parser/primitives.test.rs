@@ -1,6 +1,6 @@
 use crate::parser::{
     parse_identifier, parse_let_binding, parse_literal, parse_number, BinaryExpr, BinaryOperator,
-    Expr, Identifier, LetAssignment, LiteralExpr, Number, Parser,
+    Expr, Identifier, LetBinding, LiteralExpr, Number, Parser,
 };
 
 #[test]
@@ -34,14 +34,14 @@ fn test_parse_lparen() {
 
 #[test]
 fn test_parse_let_binding() {
-    let src = "let foo = 1 + 2";
+    let src = "let foo = 1 + 2;";
     let parser = parse_let_binding();
 
     assert_eq!(
         parser.parse(src).unwrap(),
         (
             "",
-            LetAssignment {
+            LetBinding {
                 identifier: Expr::Literal(LiteralExpr::Identifier(Identifier(String::from("foo")))),
                 rhs: Expr::Binary(BinaryExpr {
                     lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(1)))),
