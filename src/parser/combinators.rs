@@ -13,6 +13,19 @@ where
     }
 }
 
+pub fn either_polymorphic<'a, R1, R2>(
+    parser1: BoxedParser<'a, R1>,
+    parser2: BoxedParser<'a, R2>,
+) -> impl Parser<'a, (Option<R1>, Option<R2>)> {
+    move |input| match parser1.parse(input) {
+        Ok((rest, result)) => Ok((rest, (Some(result), None))),
+        Err(err1) => match parser2.parse(input) {
+            Ok((rest2, result2)) => Ok((rest2, (None, Some(result2)))),
+            Err(err2) => Err(err2),
+        },
+    }
+}
+
 pub fn pair<'a, P1, P2, R1, R2>(parser1: P1, parser2: P2) -> impl Parser<'a, (R1, R2)>
 where
     P1: Parser<'a, R1>,

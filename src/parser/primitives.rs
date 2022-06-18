@@ -80,7 +80,7 @@ pub fn parse_literal<'a>(literal: &'a str) -> impl Parser<'a, &'a str> {
 // TODO: figure out if this is the best structure
 // maybe we want this to be a part of some wider "Statement" / "GrammarItem" enum?
 #[derive(Debug, Clone, PartialEq)]
-pub struct LetAssignment {
+pub struct LetBinding {
     identifier: Expr, // we only want Identifier type here, however, ..
     rhs: Expr,
 }
@@ -89,7 +89,7 @@ fn parse_statement<'a>() -> impl Parser<'a, Expr> {
     either(parse_binary_expression(), parse_expr_literal())
 }
 
-pub fn parse_let_binding<'a>() -> impl Parser<'a, LetAssignment> {
+pub fn parse_let_binding<'a>() -> impl Parser<'a, LetBinding> {
     sequence_of_monomorphic(vec![
         BoxedParser::new(parse_let_keyword()),
         BoxedParser::new(at_least_one_whitespace().map(|_| Expr::Literal(LiteralExpr::Empty))),
@@ -99,11 +99,12 @@ pub fn parse_let_binding<'a>() -> impl Parser<'a, LetAssignment> {
         ),
         BoxedParser::new(parse_statement()),
     ])
-    .map(|results| LetAssignment {
+    .map(|results| LetBinding {
         identifier: results.get(2).unwrap().clone(),
         rhs: results.get(4).unwrap().clone(),
     })
 }
+
 #[cfg(test)]
 #[path = "primitives.test.rs"]
 mod tests;
