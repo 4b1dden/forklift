@@ -22,18 +22,21 @@ fn main() {
     if mode == "repl" {
         run_repl_loop();
     } else if mode == "load" {
-        let filepath = &args[2];
-
-        let contents = fs::read_to_string(Path::new(filepath)).expect("Filepath has to be valid");
-
-        let program_parser = grammar::parse_program();
-        let parsed_program = program_parser.parse(&contents);
-
-        println!("{:#?}", parsed_program);
+        let filepath = Path::new(&args[2]);
+        load_and_eval_file(filepath);
     } else {
         println!("Unknown mode, use repl | load");
         exit(1);
     }
+}
+
+fn load_and_eval_file(path: &Path) {
+    let contents = fs::read_to_string(path).expect("Filepath has to be valid");
+
+    let program_parser = grammar::parse_program();
+    let parsed_program = program_parser.parse(&contents);
+
+    println!("{:#?}", parsed_program);
 }
 
 fn run_repl_loop() {
