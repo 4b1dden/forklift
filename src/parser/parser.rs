@@ -110,7 +110,7 @@ pub struct BinaryExpr {
     pub rhs: Box<Expr>,
 }
 
-fn and_then<'a, P, F, A, B, NextP>(parser: P, f: F) -> impl Parser<'a, B>
+pub fn and_then<'a, P, F, A, B, NextP>(parser: P, f: F) -> impl Parser<'a, B>
 where
     P: Parser<'a, A>,
     NextP: Parser<'a, B>,
@@ -122,6 +122,22 @@ where
     }
 }
 
+/*
+pub fn and_then_2<'a, P, F, A, B, NextP>(parser: P, f: F) -> impl Parser<'a, B>
+where
+    P: Parser<'a, A>,
+    NextP: Parser<'a, B>,
+    F: Fn(A) -> NextP,
+{
+    move |input| match parser.parse(input) {
+        Ok((next_input, result)) => match f(result) {
+            Ok(next_parser) => next_parser
+            Err(e) => Err(e),
+        },
+        Err(e) => Err(e),
+    }
+}
+*/
 pub struct BoxedParser<'a, Output> {
     parser: Box<dyn Parser<'a, Output> + 'a>,
 }

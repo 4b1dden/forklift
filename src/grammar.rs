@@ -4,13 +4,13 @@ use crate::parser::{
     LetBinding, LiteralExpr, Parser,
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Statement {
     Expr(Expr),
     Print(Expr),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Declaration {
     Let(LetBinding),
     Statement(Statement),
