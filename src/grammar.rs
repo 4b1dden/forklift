@@ -1,7 +1,7 @@
 use crate::parser::{
     any_of_monomorphic, either, either_polymorphic, parse_binary_expression, parse_expr_literal,
-    parse_let_binding, trim_whitespace_around, zero_or_more, BoxedParser, Expr, Identifier,
-    LetBinding, LiteralExpr, Parser,
+    parse_let_binding, parse_unary_expression, trim_whitespace_around, zero_or_more, BoxedParser,
+    Expr, Identifier, LetBinding, LiteralExpr, Parser,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -19,6 +19,7 @@ pub enum Declaration {
 pub fn parse_expr_statement<'a>() -> impl Parser<'a, Expr> {
     any_of_monomorphic(vec![
         BoxedParser::new(parse_binary_expression()),
+        BoxedParser::new(parse_unary_expression()),
         BoxedParser::new(parse_expr_literal()),
     ])
 }

@@ -1,7 +1,7 @@
 use crate::parser::{
     and_then, at_least_one_whitespace, either, parse_binary_expression, parse_expr_literal,
-    sequence_of_monomorphic, trim_whitespace_around, BoxedParser, Expr, Identifier, Keywords,
-    LiteralExpr, Number, Parser,
+    parse_unary_expression, sequence_of_monomorphic, trim_whitespace_around, BoxedParser, Expr,
+    Identifier, Keywords, LiteralExpr, Number, Parser,
 };
 
 use super::{map, ParseResult};
@@ -102,8 +102,12 @@ pub struct LetBinding {
     pub rhs: Expr,
 }
 
+// TODO: unify this with other "statement" parser in grammar
 fn parse_statement<'a>() -> impl Parser<'a, Expr> {
-    either(parse_binary_expression(), parse_expr_literal())
+    either(
+        either(parse_unary_expression(), parse_binary_expression()),
+        parse_expr_literal(),
+    )
 }
 
 pub fn parse_let_binding<'a>() -> impl Parser<'a, LetBinding> {

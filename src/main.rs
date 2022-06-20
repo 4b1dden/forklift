@@ -42,6 +42,7 @@ fn load_and_eval_file(path: &Path) {
 fn run_repl_loop() {
     let mut line = String::new();
     let stdin = io::stdin();
+    let parser = grammar::parse_program();
 
     loop {
         println!("fl >>>");
@@ -49,7 +50,7 @@ fn run_repl_loop() {
         stdin.lock().read_line(&mut line).unwrap();
 
         if line.trim().to_lowercase() != "exit" {
-            let dec = parse_declaration().parse(&line);
+            let dec = grammar::parse_program().parse(&line);
             println!("{:#?}", dec);
         } else {
             break;

@@ -51,6 +51,12 @@ pub enum BinaryOperator {
     Mul,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum UnaryOperator {
+    Minus,
+    Bang,
+}
+
 impl From<&str> for BinaryOperator {
     fn from(incoming: &str) -> Self {
         match incoming {
@@ -63,9 +69,20 @@ impl From<&str> for BinaryOperator {
     }
 }
 
+impl From<&str> for UnaryOperator {
+    fn from(incoming: &str) -> Self {
+        match incoming {
+            "-" => UnaryOperator::Minus,
+            "!" => UnaryOperator::Bang,
+            _ => panic!("not implemented"),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
     Literal(LiteralExpr),
+    Unary(UnaryExpr),
     Binary(BinaryExpr),
 }
 
@@ -108,6 +125,12 @@ pub struct BinaryExpr {
     pub lhs: Box<Expr>,
     pub op: BinaryOperator,
     pub rhs: Box<Expr>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct UnaryExpr {
+    op: UnaryOperator,
+    expr: Box<Expr>,
 }
 
 pub fn and_then<'a, P, F, A, B, NextP>(parser: P, f: F) -> impl Parser<'a, B>
@@ -194,6 +217,16 @@ fn bin_operand<'a>() -> impl Parser<'a, &'a str> {
     )
 }
 
+fn unary_operand<'a>() -> impl Parser<'a, &'a str> {
+    let operands = vec!["-", "!"];
+    any_of_monomorphic(
+        operands
+            .iter()
+            .map(|op_str| parse_literal(op_str.clone()))
+            .collect(),
+    )
+}
+
 fn next_char(input: &str) -> ParseResult<char> {
     input
         .chars()
@@ -256,6 +289,19 @@ pub fn parse_binary_expression<'a>() -> impl Parser<'a, Expr> {
     return pair(lhs_number, one_or_more(rhs_parser))
         .map(|(base_expr, tuples)| flatten_bin_expr_to_infix(base_expr, tuples))
         .map(|infix_exprs| fold_infix_binary_to_single_expr(infix_exprs));
+}
+
+pub fn parse_unary_expression<'a>() -> impl Parser<'a, Expr> {
+    let unary_op = optional_whitespace()
+        .and_then(|_| unary_operand().map(|op_char| UnaryOperator::from(op_char)));
+    let expr_parser = parse_single_statement();
+
+    pair(unary_op, expr_parser).map(|(unary_op, expr)| {
+        Expr::Unary(UnaryExpr {
+            op: unary_op,
+            expr: Box::new(expr),
+        })
+    })
 }
 
 fn flatten_bin_expr_to_infix(

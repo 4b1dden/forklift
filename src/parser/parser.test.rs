@@ -1,7 +1,8 @@
 use crate::parser::{
     any_of_monomorphic, at_least_one_whitespace, fold_infix_binary_to_single_expr, map,
-    parse_binary_expression, parse_expr_literal, parse_literal, parse_number, predicate,
-    BinaryExpr, BinaryOperator, Expr, Identifier, LiteralExpr, Number, Parser, StringLiteral,
+    parse_binary_expression, parse_expr_literal, parse_literal, parse_number,
+    parse_unary_expression, predicate, BinaryExpr, BinaryOperator, Expr, Identifier, LiteralExpr,
+    Number, Parser, StringLiteral, UnaryExpr, UnaryOperator,
 };
 
 fn mock_number_literal_expr(num: i32) -> Expr {
@@ -104,5 +105,34 @@ fn test_parse_expr_literal() {
     assert_eq!(
         parser.parse("123").unwrap(),
         ("", Expr::Literal(LiteralExpr::NumberLiteral(Number(123))))
+    );
+}
+
+#[test]
+fn test_parse_unary_expr() {
+    let parser = parse_unary_expression();
+
+    assert_eq!(
+        parser.parse("-3"),
+        Ok((
+            "",
+            Expr::Unary(UnaryExpr {
+                op: UnaryOperator::Minus,
+                expr: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(3)))),
+            })
+        ))
+    );
+
+    assert_eq!(
+        parser.parse("!foo"),
+        Ok((
+            "",
+            Expr::Unary(UnaryExpr {
+                op: UnaryOperator::Bang,
+                expr: Box::new(Expr::Literal(LiteralExpr::Identifier(Identifier(
+                    String::from("foo")
+                )))),
+            })
+        ))
     );
 }
