@@ -4,7 +4,7 @@ use crate::parser::{
     Identifier, Keywords, LiteralExpr, Number, Parser,
 };
 
-use super::{map, ParseResult};
+use super::{any_of_monomorphic, map, triplet, ParseResult};
 
 pub fn parse_number<'a>() -> impl Parser<'a, &'a str> {
     move |input: &'a str| {
@@ -103,11 +103,19 @@ pub struct LetBinding {
 }
 
 // TODO: unify this with other "statement" parser in grammar
-fn parse_statement<'a>() -> impl Parser<'a, Expr> {
+pub fn parse_statement<'a>() -> impl Parser<'a, Expr> {
+    /*
     either(
         either(parse_unary_expression(), parse_binary_expression()),
         parse_expr_literal(),
     )
+    */
+    any_of_monomorphic(vec![
+        BoxedParser::new(parse_unary_expression()),
+        BoxedParser::new(parse_binary_expression()),
+        BoxedParser::new(parse_expr_literal()),
+        BoxedParser::new(parse_grouping_expr_2), // no clue how this works and i am very tired
+    ])
 }
 
 pub fn parse_let_binding<'a>() -> impl Parser<'a, LetBinding> {
@@ -127,6 +135,26 @@ pub fn parse_let_binding<'a>() -> impl Parser<'a, LetBinding> {
     })
 }
 
+pub fn parse_grouping_expr<'a>() -> impl Parser<'a, Expr> {
+    triplet(
+        trim_whitespace_around(parse_literal("(")),
+        parse_statement(),
+        trim_whitespace_around(parse_literal(")")),
+    )
+    .map(|(_, expr, _)| Expr::Grouping(Box::new(expr)))
+}
+
+/// Poor man's lazy eval :{
+fn parse_grouping_expr_2<'a>(input: &'a str) -> ParseResult<'a, Expr> {
+    let (rest, res) = triplet(
+        trim_whitespace_around(parse_literal("(")),
+        parse_statement(),
+        trim_whitespace_around(parse_literal(")")),
+    )
+    .parse(input)?;
+
+    Ok((rest, Expr::Grouping(Box::new(res.1))))
+}
 #[cfg(test)]
 #[path = "primitives.test.rs"]
 mod tests;

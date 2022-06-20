@@ -1,7 +1,9 @@
 use crate::parser::{
-    parse_identifier, parse_let_binding, parse_literal, parse_number, BinaryExpr, BinaryOperator,
-    Expr, Identifier, LetBinding, LiteralExpr, Number, Parser,
+    parse_binary_expression, parse_identifier, parse_let_binding, parse_literal, parse_number,
+    BinaryExpr, BinaryOperator, Expr, Identifier, LetBinding, LiteralExpr, Number, Parser,
 };
+
+use super::parse_grouping_expr;
 
 #[test]
 fn test_parse_number() {
@@ -60,4 +62,11 @@ fn test_parse_let_binding() {
         parser.parse("foo = 1 + 2"),
         Err(String::from("expected let, got foo"))
     );
+}
+
+#[test]
+fn test_parse_grouping_expr() {
+    let parser = parse_grouping_expr();
+
+    println!("{:#?}", parser.parse("(1+2)"));
 }

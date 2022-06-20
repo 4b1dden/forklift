@@ -84,6 +84,7 @@ pub enum Expr {
     Literal(LiteralExpr),
     Unary(UnaryExpr),
     Binary(BinaryExpr),
+    Grouping(Box<Expr>),
 }
 
 pub fn parse_expr_literal<'a>() -> impl Parser<'a, Expr> {
