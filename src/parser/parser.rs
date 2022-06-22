@@ -1,8 +1,8 @@
 use std::fmt::Debug;
 
 use crate::parser::{
-    any_of_monomorphic, either, left, one_or_more, pair, parse_identifier, parse_literal,
-    parse_number, right, triplet, zero_or_more,
+    any_of_monomorphic, either, left, one_or_more, pair, parse_grouping_expr_2, parse_identifier,
+    parse_literal, parse_number, right, triplet, zero_or_more,
 };
 
 use super::{parse_identifier_as_expr, parse_number_as_expr};
@@ -94,7 +94,7 @@ pub fn parse_expr_literal<'a>() -> impl Parser<'a, Expr> {
 pub fn parse_single_statement<'a>() -> impl Parser<'a, Expr> {
     // todo: impl fully
     // expr_literal | ... ?
-    parse_expr_literal()
+    either(parse_grouping_expr_2, parse_expr_literal())
 }
 
 #[derive(Clone, Debug, PartialEq)]

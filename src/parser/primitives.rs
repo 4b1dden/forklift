@@ -145,7 +145,8 @@ pub fn parse_grouping_expr<'a>() -> impl Parser<'a, Expr> {
 }
 
 /// Poor man's lazy eval :{
-fn parse_grouping_expr_2<'a>(input: &'a str) -> ParseResult<'a, Expr> {
+/// We can not call parse_statement directly when construction parse_grouping_expr
+pub fn parse_grouping_expr_2<'a>(input: &'a str) -> ParseResult<'a, Expr> {
     let (rest, res) = triplet(
         trim_whitespace_around(parse_literal("(")),
         parse_statement(),
@@ -155,6 +156,7 @@ fn parse_grouping_expr_2<'a>(input: &'a str) -> ParseResult<'a, Expr> {
 
     Ok((rest, Expr::Grouping(Box::new(res.1))))
 }
+
 #[cfg(test)]
 #[path = "primitives.test.rs"]
 mod tests;
