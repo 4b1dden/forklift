@@ -110,7 +110,7 @@ fn test_parse_expr_literal() {
 
 #[test]
 fn test_parse_unary_expr() {
-    let parser = parse_unary_expression();
+    let parser = parse_unary_expression;
 
     assert_eq!(
         parser.parse("-3"),

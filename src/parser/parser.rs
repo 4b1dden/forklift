@@ -94,7 +94,11 @@ pub fn parse_expr_literal<'a>() -> impl Parser<'a, Expr> {
 pub fn parse_single_statement<'a>() -> impl Parser<'a, Expr> {
     // todo: impl fully
     // expr_literal | ... ?
-    either(parse_grouping_expr_2, parse_expr_literal())
+    any_of_monomorphic(vec![
+        BoxedParser::new(parse_grouping_expr_2),
+        BoxedParser::new(parse_unary_expression),
+        BoxedParser::new(parse_expr_literal()),
+    ])
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -292,17 +296,19 @@ pub fn parse_binary_expression<'a>() -> impl Parser<'a, Expr> {
         .map(|infix_exprs| fold_infix_binary_to_single_expr(infix_exprs));
 }
 
-pub fn parse_unary_expression<'a>() -> impl Parser<'a, Expr> {
+pub fn parse_unary_expression<'a>(input: &'a str) -> ParseResult<'a, Expr> {
     let unary_op = optional_whitespace()
         .and_then(|_| unary_operand().map(|op_char| UnaryOperator::from(op_char)));
     let expr_parser = parse_single_statement();
 
-    pair(unary_op, expr_parser).map(|(unary_op, expr)| {
-        Expr::Unary(UnaryExpr {
-            op: unary_op,
-            expr: Box::new(expr),
+    pair(unary_op, expr_parser)
+        .map(|(unary_op, expr)| {
+            Expr::Unary(UnaryExpr {
+                op: unary_op,
+                expr: Box::new(expr),
+            })
         })
-    })
+        .parse(input)
 }
 
 fn flatten_bin_expr_to_infix(

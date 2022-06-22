@@ -19,7 +19,7 @@ pub enum Declaration {
 pub fn parse_expr_statement<'a>() -> impl Parser<'a, Expr> {
     any_of_monomorphic(vec![
         BoxedParser::new(parse_binary_expression()),
-        BoxedParser::new(parse_unary_expression()),
+        BoxedParser::new(parse_unary_expression),
         BoxedParser::new(parse_expr_literal()),
     ])
 }

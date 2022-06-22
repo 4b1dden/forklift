@@ -111,8 +111,8 @@ pub fn parse_statement<'a>() -> impl Parser<'a, Expr> {
     )
     */
     any_of_monomorphic(vec![
-        BoxedParser::new(parse_unary_expression()),
         BoxedParser::new(parse_binary_expression()),
+        BoxedParser::new(parse_unary_expression),
         BoxedParser::new(parse_expr_literal()),
         BoxedParser::new(parse_grouping_expr_2), // no clue how this works and i am very tired
     ])
