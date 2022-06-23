@@ -1,7 +1,7 @@
 use crate::parser::{
     any_of_monomorphic, either, either_polymorphic, parse_binary_expression, parse_expr_literal,
-    parse_let_binding, parse_unary_expression, trim_whitespace_around, zero_or_more, BoxedParser,
-    Expr, Identifier, LetBinding, LiteralExpr, Parser,
+    parse_let_binding, parse_print_statement, parse_unary_expression, trim_whitespace_around,
+    zero_or_more, BoxedParser, Expr, Identifier, LetBinding, LiteralExpr, Parser,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -26,21 +26,18 @@ pub fn parse_expr_statement<'a>() -> impl Parser<'a, Expr> {
 
 pub fn parse_statement_as_expr<'a>() -> impl Parser<'a, Statement> {
     // expr | print statement
-    parse_expr_statement().map(|expr| Statement::Expr(expr))
+    any_of_monomorphic(vec![
+        BoxedParser::new(parse_print_statement().map(|expr| Statement::Print(expr))),
+        BoxedParser::new(parse_expr_statement().map(|expr| Statement::Expr(expr))),
+    ])
 }
 
 pub fn parse_declaration<'a>() -> BoxedParser<'a, Declaration> {
-    trim_whitespace_around(
-        either_polymorphic(
-            BoxedParser::new(parse_let_binding()),
-            BoxedParser::new(parse_statement_as_expr()),
-        )
-        .map(|declaration_candidate| match declaration_candidate {
-            (Some(let_binding), None) => Declaration::Let(let_binding),
-            (None, Some(statement)) => Declaration::Statement(statement),
-            _ => todo!("err reporting here"),
-        }),
-    )
+    trim_whitespace_around(any_of_monomorphic(vec![
+        BoxedParser::new(parse_let_binding()).map(|let_binding| Declaration::Let(let_binding)),
+        BoxedParser::new(parse_statement_as_expr())
+            .map(|statement| Declaration::Statement(statement)),
+    ]))
 }
 
 pub type Program = Vec<Declaration>;

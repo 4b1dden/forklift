@@ -114,6 +114,7 @@ pub enum LiteralExpr {
 #[derive(Clone, Debug, PartialEq)]
 pub enum Keywords {
     Let,
+    Print, // for early development only, we'll remove this later
 }
 
 #[derive(Clone, Debug, PartialEq)]

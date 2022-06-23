@@ -81,6 +81,10 @@ pub fn parse_let_keyword<'a>() -> impl Parser<'a, Expr> {
     parse_literal("let").map(|literal_as_expr| Expr::Literal(LiteralExpr::Keyword(Keywords::Let)))
 }
 
+pub fn parse_print_keyword<'a>() -> impl Parser<'a, Expr> {
+    parse_literal("print").map(|print_as_expr| Expr::Literal(LiteralExpr::Keyword(Keywords::Print)))
+}
+
 pub fn parse_literal<'a>(literal: &'a str) -> impl Parser<'a, &'a str> {
     move |input: &'a str| match input.get(0..literal.len()) {
         Some(substr) => {
@@ -133,6 +137,16 @@ pub fn parse_let_binding<'a>() -> impl Parser<'a, LetBinding> {
         identifier: results.get(2).unwrap().clone(),
         rhs: results.get(4).unwrap().clone(),
     })
+}
+
+pub fn parse_print_statement<'a>() -> impl Parser<'a, Expr> {
+    sequence_of_monomorphic(vec![
+        BoxedParser::new(parse_print_keyword()),
+        BoxedParser::new(at_least_one_whitespace().map(|_| Expr::Literal(LiteralExpr::Empty))),
+        BoxedParser::new(parse_statement()),
+        BoxedParser::new(parse_literal(";").map(|_| Expr::Literal(LiteralExpr::Empty))),
+    ])
+    .map(|results| results.get(2).unwrap().clone())
 }
 
 pub fn parse_grouping_expr<'a>() -> impl Parser<'a, Expr> {

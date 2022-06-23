@@ -3,7 +3,7 @@ use crate::parser::{
     BinaryExpr, BinaryOperator, Expr, Identifier, LetBinding, LiteralExpr, Number, Parser,
 };
 
-use super::parse_grouping_expr;
+use super::{parse_grouping_expr, parse_print_statement};
 
 #[test]
 fn test_parse_number() {
@@ -68,5 +68,22 @@ fn test_parse_let_binding() {
 fn test_parse_grouping_expr() {
     let parser = parse_grouping_expr();
 
-    println!("{:#?}", parser.parse("(1+2)"));
+    //    println!("{:#?}", parser.parse("(1+2)"));
+}
+
+#[test]
+fn test_parse_print_statement() {
+    let parser = parse_print_statement();
+
+    assert_eq!(
+        Ok((
+            "",
+            Expr::Binary(BinaryExpr {
+                lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(1)))),
+                op: BinaryOperator::Plus,
+                rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))),
+            })
+        )),
+        parser.parse("print 1+2")
+    );
 }
