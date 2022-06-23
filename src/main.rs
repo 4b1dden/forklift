@@ -5,6 +5,7 @@ use std::path::Path;
 use std::process::exit;
 
 mod grammar;
+mod interpreter;
 mod parser;
 mod tokenizer;
 
@@ -50,8 +51,9 @@ fn run_repl_loop() {
         stdin.lock().read_line(&mut line).unwrap();
 
         if line.trim().to_lowercase() != "exit" {
-            let dec = grammar::parse_program().parse(&line);
-            println!("{:#?}", dec);
+            let (rest, dec) = grammar::parse_declaration().parse(&line).unwrap();
+            let evaled = interpreter::declaration::eval_declaration(dec);
+            println!("evaluated ---> {:#?} \n rest ---> {:#?}", evaled, rest);
         } else {
             break;
         }

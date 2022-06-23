@@ -135,8 +135,8 @@ pub struct BinaryExpr {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct UnaryExpr {
-    op: UnaryOperator,
-    expr: Box<Expr>,
+    pub op: UnaryOperator,
+    pub expr: Box<Expr>,
 }
 
 pub fn and_then<'a, P, F, A, B, NextP>(parser: P, f: F) -> impl Parser<'a, B>
@@ -260,7 +260,7 @@ where
         })
     }
 }
-
+// for early development only, we'll remove this later
 pub fn parse_whitespace<'a>() -> impl Parser<'a, ()> {
     predicate(next_char, |c| c.is_whitespace()).map(|_| ()) // is_whitespace also matches "\n", "\t", etc...
 }

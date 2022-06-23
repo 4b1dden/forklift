@@ -68,7 +68,48 @@ fn test_parse_let_binding() {
 fn test_parse_grouping_expr() {
     let parser = parse_grouping_expr();
 
-    //    println!("{:#?}", parser.parse("(1+2)"));
+    assert_eq!(
+        Ok((
+            "",
+            Expr::Grouping(Box::new(Expr::Binary(BinaryExpr {
+                lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(1)))),
+                op: BinaryOperator::Plus,
+                rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))),
+            })))
+        )),
+        parser.parse("(1+2)")
+    );
+
+    assert_eq!(
+        Ok((
+            "",
+            Expr::Grouping(Box::new(Expr::Grouping(Box::new(Expr::Literal(
+                LiteralExpr::NumberLiteral(Number(1))
+            )))))
+        )),
+        parser.parse("((1))"),
+    );
+}
+
+#[test]
+fn test_parse_binary_with_grouping() {
+    let parser = parse_binary_expression();
+
+    assert_eq!(
+        Ok((
+            "",
+            Expr::Binary(BinaryExpr {
+                lhs: Box::new(Expr::Grouping(Box::new(Expr::Binary(BinaryExpr {
+                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(1)))),
+                    op: BinaryOperator::Plus,
+                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))),
+                })))),
+                op: BinaryOperator::Mul,
+                rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(3))))
+            })
+        )),
+        parser.parse("(1+2)*3")
+    );
 }
 
 #[test]
@@ -84,6 +125,6 @@ fn test_parse_print_statement() {
                 rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))),
             })
         )),
-        parser.parse("print 1+2")
+        parser.parse("print 1+2;")
     );
 }
