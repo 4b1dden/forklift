@@ -11,7 +11,7 @@ pub fn eval_declaration(decl: Declaration, env: &mut Environment) -> Interpreter
     match decl {
         Declaration::Let(let_binding) => evaluate_let_binding(let_binding, env),
         Declaration::Statement(statement) => match statement {
-            Statement::Expr(expr) => Ok(evaluate_expr(expr, &env)),
+            Statement::Expr(expr) => evaluate_expr(expr, &env),
             _ => Err(String::from("todo sry")),
         },
     }
@@ -48,7 +48,7 @@ impl<'a> Environment<'a> {
 }
 
 pub fn evaluate_let_binding(binding: LetBinding, env: &mut Environment) -> InterpreterResult<FL_T> {
-    let rhs_evaluated = evaluate_expr(binding.rhs, env);
+    let rhs_evaluated = evaluate_expr(binding.rhs, env)?;
 
     let _ = env.put(binding.identifier.0, rhs_evaluated.clone());
 

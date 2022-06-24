@@ -8,7 +8,7 @@ use crate::parser::{
 
 use super::InterpreterResult;
 
-pub fn evaluate_expr(expr: Expr, env: &Environment) -> FL_T {
+pub fn evaluate_expr(expr: Expr, env: &Environment) -> InterpreterResult<FL_T> {
     match expr {
         Expr::Literal(literal_expr) => evaluate_literal_expr(literal_expr, env),
         Expr::Unary(unary_expr) => evaluate_unary_expr(unary_expr, env),
@@ -28,12 +28,15 @@ pub enum FL_T_Primitive {
     Integer32(i32),
 }
 
-pub fn evaluate_literal_expr(expr: LiteralExpr, env: &Environment) -> FL_T {
+pub fn evaluate_literal_expr(expr: LiteralExpr, env: &Environment) -> InterpreterResult<FL_T> {
     match expr {
-        LiteralExpr::Identifier(ident) => env.get(ident.0).unwrap().clone(),
+        LiteralExpr::Identifier(ident) => env
+            .get(ident.0.clone())
+            .ok_or(format!("{} not found", ident.0))
+            .cloned(),
         LiteralExpr::Keyword(keyword) => todo!(),
-        LiteralExpr::NumberLiteral(num) => FL_T::Primitive(FL_T_Primitive::Integer32(num.0)),
-        LiteralExpr::StringLiteral(s) => FL_T::Primitive(FL_T_Primitive::Str(s.0)),
+        LiteralExpr::NumberLiteral(num) => Ok(FL_T::Primitive(FL_T_Primitive::Integer32(num.0))),
+        LiteralExpr::StringLiteral(s) => Ok(FL_T::Primitive(FL_T_Primitive::Str(s.0))),
         LiteralExpr::Empty => todo!(),
     }
 }
@@ -48,11 +51,11 @@ fn negate_fl_t(t: FL_T) -> FL_T {
     }
 }
 
-pub fn evaluate_unary_expr(unary_expr: UnaryExpr, env: &Environment) -> FL_T {
-    let evaluated_inside = evaluate_expr(*unary_expr.expr, env);
+pub fn evaluate_unary_expr(unary_expr: UnaryExpr, env: &Environment) -> InterpreterResult<FL_T> {
+    let evaluated_inside = evaluate_expr(*unary_expr.expr, env)?;
 
     match unary_expr.op {
-        UnaryOperator::Minus => negate_fl_t(evaluated_inside),
+        UnaryOperator::Minus => Ok(negate_fl_t(evaluated_inside)),
         UnaryOperator::Bang => todo!(),
     }
 }
@@ -82,15 +85,15 @@ where
     }
 }
 
-pub fn evaluate_binary_expr(expr: BinaryExpr, env: &Environment) -> FL_T {
-    let left = evaluate_expr(*expr.lhs, env);
-    let right = evaluate_expr(*expr.rhs, env);
+pub fn evaluate_binary_expr(expr: BinaryExpr, env: &Environment) -> InterpreterResult<FL_T> {
+    let left = evaluate_expr(*expr.lhs, env)?;
+    let right = evaluate_expr(*expr.rhs, env)?;
     let op = expr.op;
 
-    apply_bin_op_to_bin_expr(left, op, right)
+    Ok(apply_bin_op_to_bin_expr(left, op, right))
 }
 
-pub fn evaluate_grouping_expr(expr: Box<Expr>, env: &Environment) -> FL_T {
+pub fn evaluate_grouping_expr(expr: Box<Expr>, env: &Environment) -> InterpreterResult<FL_T> {
     evaluate_expr(*expr, env)
 }
 
