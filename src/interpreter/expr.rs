@@ -2,12 +2,12 @@ use std::ops::{Add, Div, Mul, Sub};
 
 use crate::parser::{BinaryExpr, BinaryOperator, Expr, LiteralExpr, UnaryExpr, UnaryOperator};
 
-pub fn interpret_expr(expr: Expr) -> FL_T {
+pub fn evaluate_expr(expr: Expr) -> FL_T {
     match expr {
-        Expr::Literal(literal_expr) => interpret_literal_expr(literal_expr),
-        Expr::Unary(unary_expr) => interpret_unary_expr(unary_expr),
-        Expr::Binary(binary_expr) => interpret_binary_expr(binary_expr),
-        Expr::Grouping(grouping_body) => interpret_grouping_expr(grouping_body),
+        Expr::Literal(literal_expr) => evaluate_literal_expr(literal_expr),
+        Expr::Unary(unary_expr) => evaluate_unary_expr(unary_expr),
+        Expr::Binary(binary_expr) => evaluate_binary_expr(binary_expr),
+        Expr::Grouping(grouping_body) => evaluate_grouping_expr(grouping_body),
     }
 }
 
@@ -22,7 +22,7 @@ pub enum FL_T_Primitive {
     Integer32(i32),
 }
 
-pub fn interpret_literal_expr(expr: LiteralExpr) -> FL_T {
+pub fn evaluate_literal_expr(expr: LiteralExpr) -> FL_T {
     match expr {
         LiteralExpr::Identifier(ident) => todo!(),
         LiteralExpr::Keyword(keyword) => todo!(),
@@ -42,8 +42,8 @@ fn negate_fl_t(t: FL_T) -> FL_T {
     }
 }
 
-pub fn interpret_unary_expr(unary_expr: UnaryExpr) -> FL_T {
-    let evaluated_inside = interpret_expr(*unary_expr.expr);
+pub fn evaluate_unary_expr(unary_expr: UnaryExpr) -> FL_T {
+    let evaluated_inside = evaluate_expr(*unary_expr.expr);
 
     match unary_expr.op {
         UnaryOperator::Minus => negate_fl_t(evaluated_inside),
@@ -76,16 +76,16 @@ where
     }
 }
 
-pub fn interpret_binary_expr(expr: BinaryExpr) -> FL_T {
-    let left = interpret_expr(*expr.lhs);
-    let right = interpret_expr(*expr.rhs);
+pub fn evaluate_binary_expr(expr: BinaryExpr) -> FL_T {
+    let left = evaluate_expr(*expr.lhs);
+    let right = evaluate_expr(*expr.rhs);
     let op = expr.op;
 
     apply_bin_op_to_bin_expr(left, op, right)
 }
 
-pub fn interpret_grouping_expr(expr: Box<Expr>) -> FL_T {
-    interpret_expr(*expr)
+pub fn evaluate_grouping_expr(expr: Box<Expr>) -> FL_T {
+    evaluate_expr(*expr)
 }
 
 #[path = "expr.test.rs"]
