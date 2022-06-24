@@ -12,15 +12,11 @@ fn test_parse_declaration() {
             "",
             vec![
                 Declaration::Let(LetBinding {
-                    identifier: Expr::Literal(LiteralExpr::Identifier(Identifier(String::from(
-                        "a"
-                    )))),
+                    identifier: Identifier(String::from("a")),
                     rhs: Expr::Literal(LiteralExpr::NumberLiteral(Number(2))),
                 }),
                 Declaration::Let(LetBinding {
-                    identifier: Expr::Literal(LiteralExpr::Identifier(Identifier(String::from(
-                        "b"
-                    )))),
+                    identifier: Identifier(String::from("b")),
                     rhs: Expr::Literal(LiteralExpr::NumberLiteral(Number(3))),
                 })
             ]

@@ -1,14 +1,21 @@
 use super::{evaluate_expr, FL_T_Primitive, FL_T};
+use crate::interpreter::Environment;
 use crate::parser::{
     BinaryExpr, BinaryOperator, Expr, LiteralExpr, Number, StringLiteral, UnaryExpr, UnaryOperator,
 };
+
+fn empty_env() -> Environment<'static> {
+    let ENV = Environment::new(None);
+
+    ENV
+}
 
 #[test]
 fn test_literal_expr() {
     let to_intepret = Expr::Literal(LiteralExpr::NumberLiteral(Number(3)));
 
     assert_eq!(
-        evaluate_expr(to_intepret),
+        evaluate_expr(to_intepret, &empty_env()),
         FL_T::Primitive(FL_T_Primitive::Integer32(3))
     );
 }
@@ -27,12 +34,12 @@ fn test_unary_expr() {
     });
 
     assert_eq!(
-        evaluate_expr(to_intepret),
+        evaluate_expr(to_intepret, &empty_env()),
         FL_T::Primitive(FL_T_Primitive::Integer32(-5))
     );
 
     assert_eq!(
-        evaluate_expr(nested),
+        evaluate_expr(nested, &empty_env()),
         FL_T::Primitive(FL_T_Primitive::Integer32(5))
     );
 }
@@ -53,12 +60,12 @@ fn test_binary_expr() {
     });
 
     assert_eq!(
-        evaluate_expr(inner),
+        evaluate_expr(inner, &empty_env()),
         FL_T::Primitive(FL_T_Primitive::Integer32(50))
     );
 
     assert_eq!(
-        evaluate_expr(nested),
+        evaluate_expr(nested, &empty_env()),
         FL_T::Primitive(FL_T_Primitive::Integer32(53))
     );
 }

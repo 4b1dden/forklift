@@ -44,7 +44,7 @@ fn test_parse_let_binding() {
         (
             "",
             LetBinding {
-                identifier: Expr::Literal(LiteralExpr::Identifier(Identifier(String::from("foo")))),
+                identifier: Identifier(String::from("foo")),
                 rhs: Expr::Binary(BinaryExpr {
                     lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(1)))),
                     op: BinaryOperator::Plus,

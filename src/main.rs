@@ -10,6 +10,7 @@ mod parser;
 mod tokenizer;
 
 use crate::grammar::parse_declaration;
+use crate::interpreter::Environment;
 use crate::parser::{BoxedParser, Expr, Parser};
 
 fn main() {
@@ -44,6 +45,7 @@ fn run_repl_loop() {
     let mut line = String::new();
     let stdin = io::stdin();
     let parser = grammar::parse_program();
+    let mut repl_env = Environment::new(None);
 
     loop {
         println!("fl >>>");
@@ -52,7 +54,7 @@ fn run_repl_loop() {
 
         if line.trim().to_lowercase() != "exit" {
             let (rest, dec) = grammar::parse_declaration().parse(&line).unwrap();
-            let evaled = interpreter::declaration::eval_declaration(dec);
+            let evaled = interpreter::declaration::eval_declaration(dec, &mut repl_env);
             println!("evaluated ---> {:#?} \n rest ---> {:#?}", evaled, rest);
         } else {
             break;

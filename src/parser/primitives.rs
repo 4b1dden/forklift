@@ -56,6 +56,10 @@ pub fn parse_identifier_as_expr<'a>() -> impl Parser<'a, Expr> {
         .map(|ident| Expr::Literal(LiteralExpr::Identifier(Identifier(ident.to_string()))))
 }
 
+pub fn parse_identifier_as_identifier<'a>() -> impl Parser<'a, Identifier> {
+    parse_identifier().map(|ident| Identifier(ident.to_string()))
+}
+
 pub fn parse_number_as_expr<'a>() -> impl Parser<'a, Expr> {
     // TODO; rework to more functional and_then
     move |input| {
@@ -102,7 +106,7 @@ pub fn parse_literal<'a>(literal: &'a str) -> impl Parser<'a, &'a str> {
 // maybe we want this to be a part of some wider "Statement" / "GrammarItem" enum?
 #[derive(Debug, Clone, PartialEq)]
 pub struct LetBinding {
-    pub identifier: Expr, // we only want Identifier type here, however, ..
+    pub identifier: Identifier, // we only want Identifier type here, however, ..
     pub rhs: Expr,
 }
 
@@ -134,9 +138,16 @@ pub fn parse_let_binding<'a>() -> impl Parser<'a, LetBinding> {
         BoxedParser::new(parse_literal(";").map(|_| Expr::Literal(LiteralExpr::Empty))),
     ])
     .map(|results| LetBinding {
-        identifier: results.get(2).unwrap().clone(),
+        identifier: ensure_is_identifier(results.get(2).unwrap().clone()),
         rhs: results.get(4).unwrap().clone(),
     })
+}
+
+pub fn ensure_is_identifier(e: Expr) -> Identifier {
+    match e {
+        Expr::Literal(LiteralExpr::Identifier(ident)) => ident,
+        _ => panic!("Something bad happened"),
+    }
 }
 
 pub fn parse_print_statement<'a>() -> impl Parser<'a, Expr> {

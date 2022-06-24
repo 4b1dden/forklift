@@ -1,13 +1,19 @@
+use std::collections::HashMap;
 use std::ops::{Add, Div, Mul, Sub};
 
-use crate::parser::{BinaryExpr, BinaryOperator, Expr, LiteralExpr, UnaryExpr, UnaryOperator};
+use crate::interpreter::Environment;
+use crate::parser::{
+    BinaryExpr, BinaryOperator, Expr, LetBinding, LiteralExpr, UnaryExpr, UnaryOperator,
+};
 
-pub fn evaluate_expr(expr: Expr) -> FL_T {
+use super::InterpreterResult;
+
+pub fn evaluate_expr(expr: Expr, env: &Environment) -> FL_T {
     match expr {
-        Expr::Literal(literal_expr) => evaluate_literal_expr(literal_expr),
-        Expr::Unary(unary_expr) => evaluate_unary_expr(unary_expr),
-        Expr::Binary(binary_expr) => evaluate_binary_expr(binary_expr),
-        Expr::Grouping(grouping_body) => evaluate_grouping_expr(grouping_body),
+        Expr::Literal(literal_expr) => evaluate_literal_expr(literal_expr, env),
+        Expr::Unary(unary_expr) => evaluate_unary_expr(unary_expr, env),
+        Expr::Binary(binary_expr) => evaluate_binary_expr(binary_expr, env),
+        Expr::Grouping(grouping_body) => evaluate_grouping_expr(grouping_body, env),
     }
 }
 
@@ -22,9 +28,9 @@ pub enum FL_T_Primitive {
     Integer32(i32),
 }
 
-pub fn evaluate_literal_expr(expr: LiteralExpr) -> FL_T {
+pub fn evaluate_literal_expr(expr: LiteralExpr, env: &Environment) -> FL_T {
     match expr {
-        LiteralExpr::Identifier(ident) => todo!(),
+        LiteralExpr::Identifier(ident) => env.get(ident.0).unwrap().clone(),
         LiteralExpr::Keyword(keyword) => todo!(),
         LiteralExpr::NumberLiteral(num) => FL_T::Primitive(FL_T_Primitive::Integer32(num.0)),
         LiteralExpr::StringLiteral(s) => FL_T::Primitive(FL_T_Primitive::Str(s.0)),
@@ -42,8 +48,8 @@ fn negate_fl_t(t: FL_T) -> FL_T {
     }
 }
 
-pub fn evaluate_unary_expr(unary_expr: UnaryExpr) -> FL_T {
-    let evaluated_inside = evaluate_expr(*unary_expr.expr);
+pub fn evaluate_unary_expr(unary_expr: UnaryExpr, env: &Environment) -> FL_T {
+    let evaluated_inside = evaluate_expr(*unary_expr.expr, env);
 
     match unary_expr.op {
         UnaryOperator::Minus => negate_fl_t(evaluated_inside),
@@ -76,16 +82,16 @@ where
     }
 }
 
-pub fn evaluate_binary_expr(expr: BinaryExpr) -> FL_T {
-    let left = evaluate_expr(*expr.lhs);
-    let right = evaluate_expr(*expr.rhs);
+pub fn evaluate_binary_expr(expr: BinaryExpr, env: &Environment) -> FL_T {
+    let left = evaluate_expr(*expr.lhs, env);
+    let right = evaluate_expr(*expr.rhs, env);
     let op = expr.op;
 
     apply_bin_op_to_bin_expr(left, op, right)
 }
 
-pub fn evaluate_grouping_expr(expr: Box<Expr>) -> FL_T {
-    evaluate_expr(*expr)
+pub fn evaluate_grouping_expr(expr: Box<Expr>, env: &Environment) -> FL_T {
+    evaluate_expr(*expr, env)
 }
 
 #[path = "expr.test.rs"]
