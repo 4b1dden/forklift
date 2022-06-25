@@ -1,9 +1,10 @@
 use crate::parser::{
     parse_binary_expression, parse_identifier, parse_let_binding, parse_literal, parse_number,
-    BinaryExpr, BinaryOperator, Expr, Identifier, LetBinding, LiteralExpr, Number, Parser,
+    BinaryExpr, BinaryOperator, Expr, Identifier, IfBlock, LetBinding, LiteralExpr, Number, Parser,
 };
 
 use super::{parse_grouping_expr, parse_if_block, parse_print_statement};
+use crate::grammar::{Declaration, Statement};
 
 #[test]
 fn test_parse_number() {
@@ -137,5 +138,17 @@ fn test_parse_if_block() {
     }",
     );
 
-    println!("{:#?}", result);
+    assert_eq!(
+        Ok((
+            "",
+            IfBlock {
+                cond: Expr::Literal(LiteralExpr::NumberLiteral(Number(1))),
+                truthy_statement: Statement::Block(vec![Declaration::Statement(Statement::Print(
+                    Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))
+                ))]),
+                else_statement: None
+            }
+        )),
+        result
+    );
 }

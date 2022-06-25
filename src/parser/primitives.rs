@@ -114,8 +114,8 @@ pub struct LetBinding {
 #[derive(Debug, Clone, PartialEq)]
 pub struct IfBlock {
     pub cond: Expr,
-    pub truthy_statements: Statement,
-    pub else_statements: Option<Vec<Statement>>,
+    pub truthy_statement: Statement,
+    pub else_statement: Option<Vec<Statement>>,
 }
 
 // TODO: unify this with other "statement" parser in grammar
@@ -171,8 +171,8 @@ pub fn parse_if_block<'a>(input: &'a str) -> ParseResult<'a, IfBlock> {
     )
     .map(|(conditional_expr, statement)| IfBlock {
         cond: conditional_expr,
-        truthy_statements: statement,
-        else_statements: None, // TODO
+        truthy_statement: statement,
+        else_statement: None, // TODO
     })
     .parse(input)
 }

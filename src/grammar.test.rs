@@ -1,6 +1,9 @@
 use super::{parse_declaration, parse_statement, Declaration};
 
-use crate::parser::{zero_or_more, Expr, Identifier, LetBinding, LiteralExpr, Number, Parser};
+use crate::grammar::Statement;
+use crate::parser::{
+    zero_or_more, Expr, Identifier, IfBlock, LetBinding, LiteralExpr, Number, Parser,
+};
 
 #[test]
 fn test_parse_declaration() {
@@ -24,19 +27,25 @@ fn test_parse_declaration() {
     );
 }
 
-/*
 #[test]
 fn test_parse_statement() {
     let parser = parse_statement();
 
-    println!(
-        "{:#?}",
+    assert_eq!(
+        Ok((
+            "",
+            Statement::If(Box::new(IfBlock {
+                cond: Expr::Literal(LiteralExpr::NumberLiteral(Number(1))),
+                truthy_statement: Statement::Block(vec![Declaration::Statement(Statement::Print(
+                    Expr::Literal(LiteralExpr::NumberLiteral(Number(10)))
+                ))]),
+                else_statement: None
+            }))
+        )),
         parser.parse(
             "if (1) {
-        let c = 10;
-        print c;
+        print 10;
     }"
         )
     );
 }
-*/

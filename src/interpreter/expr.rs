@@ -44,7 +44,7 @@ pub fn evaluate_if_block(if_block: &IfBlock, env: &Environment) -> InterpreterRe
 
     let mut last_result = FL_T::Unit;
     if determinant_as_bool {
-        last_result = evaluate_statement(&if_block.truthy_statements, &mut local_env)?;
+        last_result = evaluate_statement(&if_block.truthy_statement, &mut local_env)?;
     }
 
     Ok(last_result)
