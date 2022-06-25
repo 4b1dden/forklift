@@ -66,7 +66,7 @@ fn run_repl_loop() {
         stdin.lock().read_line(&mut line).unwrap();
 
         if line.trim().to_lowercase() != "exit" {
-            let (rest, dec) = grammar::parse_declaration().parse(&line).unwrap();
+            let (rest, dec) = grammar::parse_declaration(&line).unwrap();
             let evaled = interpreter::declaration::eval_declaration(&dec, &mut repl_env);
             println!("evaluated ---> {:#?} \n rest ---> {:#?}", evaled, rest);
         } else {

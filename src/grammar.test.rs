@@ -4,7 +4,7 @@ use crate::parser::{zero_or_more, Expr, Identifier, LetBinding, LiteralExpr, Num
 
 #[test]
 fn test_parse_declaration() {
-    let multi = zero_or_more(parse_declaration());
+    let multi = zero_or_more(parse_declaration);
 
     assert_eq!(
         multi.parse("let a = 2;\n   let b=3;"),

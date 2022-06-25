@@ -2,7 +2,7 @@ use crate::parser::{
     any_of_monomorphic, either, either_polymorphic, parse_binary_expression, parse_expr_literal,
     parse_let_binding, parse_literal, parse_print_statement, parse_unary_expression,
     trim_whitespace_around, triplet, zero_or_more, BoxedParser, Expr, Identifier, LetBinding,
-    LiteralExpr, ParseResult, ParseResult, Parser,
+    LiteralExpr, ParseResult, Parser,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -58,9 +58,9 @@ where
 
 pub fn parse_program<'a>() -> impl Parser<'a, Program> {
     zero_or_more(either(
-        wrapped_scope(zero_or_more(parse_declaration()))
+        wrapped_scope(zero_or_more(parse_declaration))
             .map(|declarations| Declaration::ScopedBlock(declarations)),
-        parse_declaration(),
+        parse_declaration,
     ))
 }
 

@@ -15,8 +15,8 @@ fn test_literal_expr() {
     let to_intepret = Expr::Literal(LiteralExpr::NumberLiteral(Number(3)));
 
     assert_eq!(
-        evaluate_expr(to_intepret, &empty_env()),
-        FL_T::Primitive(FL_T_Primitive::Integer32(3))
+        evaluate_expr(&to_intepret, &empty_env()),
+        Ok(FL_T::Primitive(FL_T_Primitive::Integer32(3)))
     );
 }
 
@@ -34,13 +34,13 @@ fn test_unary_expr() {
     });
 
     assert_eq!(
-        evaluate_expr(to_intepret, &empty_env()),
-        FL_T::Primitive(FL_T_Primitive::Integer32(-5))
+        evaluate_expr(&to_intepret, &empty_env()),
+        Ok(FL_T::Primitive(FL_T_Primitive::Integer32(-5)))
     );
 
     assert_eq!(
-        evaluate_expr(nested, &empty_env()),
-        FL_T::Primitive(FL_T_Primitive::Integer32(5))
+        evaluate_expr(&nested, &empty_env()),
+        Ok(FL_T::Primitive(FL_T_Primitive::Integer32(5)))
     );
 }
 
@@ -60,12 +60,12 @@ fn test_binary_expr() {
     });
 
     assert_eq!(
-        evaluate_expr(inner, &empty_env()),
-        FL_T::Primitive(FL_T_Primitive::Integer32(50))
+        evaluate_expr(&inner, &empty_env()),
+        Ok(FL_T::Primitive(FL_T_Primitive::Integer32(50)))
     );
 
     assert_eq!(
-        evaluate_expr(nested, &empty_env()),
-        FL_T::Primitive(FL_T_Primitive::Integer32(53))
+        evaluate_expr(&nested, &empty_env()),
+        Ok(FL_T::Primitive(FL_T_Primitive::Integer32(53)))
     );
 }
