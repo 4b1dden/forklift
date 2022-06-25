@@ -2,3 +2,4 @@ let a = 1 + 2;
 let b = a + 3;
 let c = -2;
 print c;
+print 2*3*4*5;

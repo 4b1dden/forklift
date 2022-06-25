@@ -10,7 +10,7 @@ mod parser;
 mod tokenizer;
 
 use crate::grammar::parse_declaration;
-use crate::interpreter::Environment;
+use crate::interpreter::{Environment, Interpreter};
 use crate::parser::{BoxedParser, Expr, Parser};
 
 fn main() {
@@ -36,9 +36,20 @@ fn load_and_eval_file(path: &Path) {
     let contents = fs::read_to_string(path).expect("Filepath has to be valid");
 
     let program_parser = grammar::parse_program();
-    let parsed_program = program_parser.parse(&contents);
+    let (rest, parsed_program) = program_parser.parse(&contents).unwrap();
 
-    println!("{:#?}", parsed_program);
+    let dec_count = parsed_program.len();
+    let mut interpreter = Interpreter::new(parsed_program);
+
+    println!("[FL]: ------ PROGRAM EVALUATION START");
+    let executed_prog = interpreter.interpret_program();
+    println!("[FL]: ------ PROGRAM EVALUATION END");
+
+    println!("[FL]: Successfully executed program!");
+    println!("[FL]: Declarations: {:#?}", dec_count);
+    println!("[FL]: Dump of global_env: {:#?}", interpreter.global_env);
+
+    // println!("{:#?}", parsed_program);
 }
 
 fn run_repl_loop() {
@@ -54,7 +65,7 @@ fn run_repl_loop() {
 
         if line.trim().to_lowercase() != "exit" {
             let (rest, dec) = grammar::parse_declaration().parse(&line).unwrap();
-            let evaled = interpreter::declaration::eval_declaration(dec, &mut repl_env);
+            let evaled = interpreter::declaration::eval_declaration(&dec, &mut repl_env);
             println!("evaluated ---> {:#?} \n rest ---> {:#?}", evaled, rest);
         } else {
             break;
