@@ -28,6 +28,7 @@ pub fn evaluate_print_statement(expr: &Expr, env: &Environment) -> InterpreterRe
 #[derive(Debug, Clone, PartialEq)]
 pub enum FL_T {
     Primitive(FL_T_Primitive),
+    Unit,
 }
 
 #[derive(Debug, Clone, PartialEq)]

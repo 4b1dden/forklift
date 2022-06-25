@@ -9,6 +9,16 @@ pub fn eval_declaration(decl: &Declaration, env: &mut Environment) -> Interprete
     match decl {
         Declaration::Let(let_binding) => evaluate_let_binding(let_binding, env),
         Declaration::Statement(statement) => evaluate_statement(statement, env),
+        Declaration::ScopedBlock(declarations) => {
+            let mut local_env = Environment::new(Some(&env));
+
+            let mut last_result = FL_T::Unit;
+            for declaration in declarations.iter() {
+                last_result = eval_declaration(declaration, &mut local_env)?;
+            }
+
+            Ok(last_result)
+        }
     }
 }
 

@@ -38,6 +38,8 @@ fn load_and_eval_file(path: &Path) {
     let program_parser = grammar::parse_program();
     let (rest, parsed_program) = program_parser.parse(&contents).unwrap();
 
+    println!("{:#?}", parsed_program);
+
     let dec_count = parsed_program.len();
     let mut interpreter = Interpreter::new(parsed_program);
 
