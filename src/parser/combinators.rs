@@ -163,6 +163,17 @@ where
     }
 }
 
+pub fn optional<'a, P, R>(parser: P) -> impl Parser<'a, Option<R>>
+where
+    P: Parser<'a, R>,
+{
+    move |input| {
+        parser
+            .parse(input)
+            .map(|(rest, matched)| (rest, Some(matched)))
+    }
+}
+
 #[cfg(test)]
 #[path = "combinators.test.rs"]
 mod tests;
