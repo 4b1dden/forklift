@@ -34,13 +34,24 @@ pub fn parse_statement_as_expr<'a>() -> impl Parser<'a, Statement> {
     ])
 }
 
+pub fn decl_let_binding<'a>() -> BoxedParser<'a, Declaration> {
+    BoxedParser::new(parse_let_binding()).map(|let_binding| Declaration::Let(let_binding))
+}
+
+pub fn decl_statement<'a>() -> BoxedParser<'a, Declaration> {
+    BoxedParser::new(parse_statement_as_expr()).map(|statement| Declaration::Statement(statement))
+}
+
+pub fn decl_scoped_block<'a>() -> BoxedParser<'a, Declaration> {
+    BoxedParser::new(wrapped_scope(zero_or_more(parse_declaration)))
+        .map(|block| Declaration::ScopedBlock(block))
+}
+
 pub fn parse_declaration<'a>(input: &'a str) -> ParseResult<'a, Declaration> {
     trim_whitespace_around(any_of_monomorphic(vec![
-        BoxedParser::new(parse_let_binding()).map(|let_binding| Declaration::Let(let_binding)),
-        BoxedParser::new(parse_statement_as_expr())
-            .map(|statement| Declaration::Statement(statement)),
-        BoxedParser::new(wrapped_scope(zero_or_more(parse_declaration)))
-            .map(|block| Declaration::ScopedBlock(block)),
+        decl_let_binding(),
+        decl_statement(),
+        decl_scoped_block(),
     ]))
     .parse(input)
 }
