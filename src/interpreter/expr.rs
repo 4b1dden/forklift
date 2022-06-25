@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::ops::{Add, Div, Mul, Sub};
 
-use crate::interpreter::Environment;
+use crate::grammar::Declaration;
+use crate::interpreter::{eval_declaration, Environment};
 use crate::parser::{
     BinaryExpr, BinaryOperator, Expr, LetBinding, LiteralExpr, UnaryExpr, UnaryOperator,
 };
@@ -23,6 +24,17 @@ pub fn evaluate_print_statement(expr: &Expr, env: &Environment) -> InterpreterRe
     println!("{:?}", evaluated);
 
     Ok(evaluated)
+}
+
+pub fn evaluate_block(declarations: &[Declaration], env: &Environment) -> InterpreterResult<FL_T> {
+    let mut local_env = Environment::new(Some(&env));
+
+    let mut last_result = FL_T::Unit;
+    for declaration in declarations.iter() {
+        last_result = eval_declaration(declaration, &mut local_env)?;
+    }
+
+    Ok(last_result)
 }
 
 #[derive(Debug, Clone, PartialEq)]

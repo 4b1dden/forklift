@@ -9,13 +9,13 @@ use crate::parser::{
 pub enum Statement {
     Expr(Expr),
     Print(Expr),
+    Block(Vec<Declaration>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Declaration {
     Let(LetBinding),
     Statement(Statement),
-    ScopedBlock(Vec<Declaration>),
 }
 
 pub fn parse_expr_statement<'a>() -> impl Parser<'a, Expr> {
@@ -31,6 +31,8 @@ pub fn parse_statement_as_expr<'a>() -> impl Parser<'a, Statement> {
     any_of_monomorphic(vec![
         BoxedParser::new(parse_print_statement().map(|expr| Statement::Print(expr))),
         BoxedParser::new(parse_expr_statement().map(|expr| Statement::Expr(expr))),
+        BoxedParser::new(wrapped_scope(zero_or_more(parse_declaration)))
+            .map(|declarations| Statement::Block(declarations)),
     ])
 }
 
@@ -42,16 +44,11 @@ pub fn decl_statement<'a>() -> BoxedParser<'a, Declaration> {
     BoxedParser::new(parse_statement_as_expr()).map(|statement| Declaration::Statement(statement))
 }
 
-pub fn decl_scoped_block<'a>() -> BoxedParser<'a, Declaration> {
-    BoxedParser::new(wrapped_scope(zero_or_more(parse_declaration)))
-        .map(|block| Declaration::ScopedBlock(block))
-}
-
 pub fn parse_declaration<'a>(input: &'a str) -> ParseResult<'a, Declaration> {
     trim_whitespace_around(any_of_monomorphic(vec![
         decl_let_binding(),
         decl_statement(),
-        decl_scoped_block(),
+        // decl_scoped_block(),
     ]))
     .parse(input)
 }
@@ -68,11 +65,7 @@ where
 }
 
 pub fn parse_program<'a>() -> impl Parser<'a, Program> {
-    zero_or_more(either(
-        wrapped_scope(zero_or_more(parse_declaration))
-            .map(|declarations| Declaration::ScopedBlock(declarations)),
-        parse_declaration,
-    ))
+    zero_or_more(parse_declaration)
 }
 
 #[cfg(test)]
