@@ -1,8 +1,8 @@
 use crate::parser::{
     any_of_monomorphic, either, either_polymorphic, parse_binary_expression, parse_expr_literal,
-    parse_let_binding, parse_literal, parse_print_statement, parse_unary_expression,
-    trim_whitespace_around, triplet, zero_or_more, BoxedParser, Expr, Identifier, LetBinding,
-    LiteralExpr, ParseResult, Parser,
+    parse_if_block, parse_let_binding, parse_literal, parse_print_statement,
+    parse_unary_expression, trim_whitespace_around, triplet, zero_or_more, BoxedParser, Expr,
+    Identifier, IfBlock, LetBinding, LiteralExpr, ParseResult, Parser,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -10,6 +10,7 @@ pub enum Statement {
     Expr(Expr),
     Print(Expr),
     Block(Vec<Declaration>),
+    If(Box<IfBlock>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -26,9 +27,10 @@ pub fn parse_expr_statement<'a>() -> impl Parser<'a, Expr> {
     ])
 }
 
-pub fn parse_statement_as_expr<'a>() -> impl Parser<'a, Statement> {
+pub fn parse_statement<'a>() -> impl Parser<'a, Statement> {
     // expr | print statement
     any_of_monomorphic(vec![
+        BoxedParser::new(parse_if_block).map(|if_block| Statement::If(Box::new(if_block))),
         BoxedParser::new(parse_print_statement().map(|expr| Statement::Print(expr))),
         BoxedParser::new(parse_expr_statement().map(|expr| Statement::Expr(expr))),
         BoxedParser::new(wrapped_scope(zero_or_more(parse_declaration)))
@@ -41,7 +43,7 @@ pub fn decl_let_binding<'a>() -> BoxedParser<'a, Declaration> {
 }
 
 pub fn decl_statement<'a>() -> BoxedParser<'a, Declaration> {
-    BoxedParser::new(parse_statement_as_expr()).map(|statement| Declaration::Statement(statement))
+    BoxedParser::new(parse_statement()).map(|statement| Declaration::Statement(statement))
 }
 
 pub fn parse_declaration<'a>(input: &'a str) -> ParseResult<'a, Declaration> {

@@ -1,6 +1,6 @@
 use crate::grammar::{Declaration, Statement};
 use crate::interpreter::{
-    evaluate_block, evaluate_expr, evaluate_print_statement, Environment, FL_T,
+    evaluate_block, evaluate_expr, evaluate_if_block, evaluate_print_statement, Environment, FL_T,
 };
 use crate::parser::LetBinding;
 
@@ -19,6 +19,7 @@ pub fn evaluate_statement(statement: &Statement, env: &mut Environment) -> Inter
         Statement::Expr(expr) => evaluate_expr(expr, &env),
         Statement::Print(expr_to_print) => evaluate_print_statement(expr_to_print, &env),
         Statement::Block(declarations) => evaluate_block(declarations, &env),
+        Statement::If(if_block) => evaluate_if_block(if_block, &env),
     }
 }
 

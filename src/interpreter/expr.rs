@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 use std::ops::{Add, Div, Mul, Sub};
 
-use crate::grammar::Declaration;
+use crate::grammar::{Declaration, Statement};
 use crate::interpreter::{eval_declaration, Environment};
 use crate::parser::{
-    BinaryExpr, BinaryOperator, Expr, LetBinding, LiteralExpr, UnaryExpr, UnaryOperator,
+    BinaryExpr, BinaryOperator, Expr, IfBlock, LetBinding, LiteralExpr, UnaryExpr, UnaryOperator,
 };
 
-use super::InterpreterResult;
+use super::{evaluate_statement, InterpreterResult};
 
 pub fn evaluate_expr(expr: &Expr, env: &Environment) -> InterpreterResult<FL_T> {
     match expr {
@@ -32,6 +32,19 @@ pub fn evaluate_block(declarations: &[Declaration], env: &Environment) -> Interp
     let mut last_result = FL_T::Unit;
     for declaration in declarations.iter() {
         last_result = eval_declaration(declaration, &mut local_env)?;
+    }
+
+    return Ok(last_result);
+}
+
+pub fn evaluate_if_block(if_block: &IfBlock, env: &Environment) -> InterpreterResult<FL_T> {
+    let determinant = evaluate_expr(&if_block.cond, env)?;
+    let determinant_as_bool = cast_to_bool(&determinant);
+    let mut local_env = Environment::new(Some(&env));
+
+    let mut last_result = FL_T::Unit;
+    if determinant_as_bool {
+        last_result = evaluate_statement(&if_block.truthy_statements, &mut local_env)?;
     }
 
     Ok(last_result)
@@ -116,6 +129,16 @@ pub fn evaluate_binary_expr(expr: &BinaryExpr, env: &Environment) -> Interpreter
 
 pub fn evaluate_grouping_expr(expr: &Box<Expr>, env: &Environment) -> InterpreterResult<FL_T> {
     evaluate_expr(&expr, env)
+}
+
+// TODO: Remove this once we have type checks? I'd want my language to be strict and now allow
+// stuff like if ("foo") like wtf is a "truthy" value they have played us for absolute fools
+pub fn cast_to_bool(x: &FL_T) -> bool {
+    match x {
+        FL_T::Primitive(FL_T_Primitive::Integer32(int32)) => *int32 > 0,
+        FL_T::Primitive(FL_T_Primitive::Str(string)) => string != "",
+        FL_T::Unit => false,
+    }
 }
 
 #[path = "expr.test.rs"]

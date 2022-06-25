@@ -3,7 +3,7 @@ use crate::parser::{
     BinaryExpr, BinaryOperator, Expr, Identifier, LetBinding, LiteralExpr, Number, Parser,
 };
 
-use super::{parse_grouping_expr, parse_print_statement};
+use super::{parse_grouping_expr, parse_if_block, parse_print_statement};
 
 #[test]
 fn test_parse_number() {
@@ -127,4 +127,15 @@ fn test_parse_print_statement() {
         )),
         parser.parse("print 1+2;")
     );
+}
+
+#[test]
+fn test_parse_if_block() {
+    let result = parse_if_block(
+        "if (1) {
+        print 2;
+    }",
+    );
+
+    println!("{:#?}", result);
 }

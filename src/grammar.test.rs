@@ -1,4 +1,4 @@
-use super::{parse_declaration, Declaration};
+use super::{parse_declaration, parse_statement, Declaration};
 
 use crate::parser::{zero_or_more, Expr, Identifier, LetBinding, LiteralExpr, Number, Parser};
 
@@ -23,3 +23,20 @@ fn test_parse_declaration() {
         ))
     );
 }
+
+/*
+#[test]
+fn test_parse_statement() {
+    let parser = parse_statement();
+
+    println!(
+        "{:#?}",
+        parser.parse(
+            "if (1) {
+        let c = 10;
+        print c;
+    }"
+        )
+    );
+}
+*/

@@ -8,3 +8,6 @@ print 2*3*4*5;
         print inner;
     }
 }
+if (1) {
+    print 2123232;
+}

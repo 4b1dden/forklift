@@ -1,10 +1,11 @@
+use crate::grammar::{parse_statement, wrapped_scope, Statement};
 use crate::parser::{
     and_then, at_least_one_whitespace, either, parse_binary_expression, parse_expr_literal,
     parse_unary_expression, sequence_of_monomorphic, trim_whitespace_around, BoxedParser, Expr,
     Identifier, Keywords, LiteralExpr, Number, Parser,
 };
 
-use super::{any_of_monomorphic, map, triplet, ParseResult};
+use super::{any_of_monomorphic, map, pair, triplet, ParseResult};
 
 pub fn parse_number<'a>() -> impl Parser<'a, &'a str> {
     move |input: &'a str| {
@@ -110,8 +111,15 @@ pub struct LetBinding {
     pub rhs: Expr,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct IfBlock {
+    pub cond: Expr,
+    pub truthy_statements: Statement,
+    pub else_statements: Option<Vec<Statement>>,
+}
+
 // TODO: unify this with other "statement" parser in grammar
-pub fn parse_statement<'a>() -> impl Parser<'a, Expr> {
+pub fn parse_expr<'a>() -> impl Parser<'a, Expr> {
     /*
     either(
         either(parse_unary_expression(), parse_binary_expression()),
@@ -134,13 +142,39 @@ pub fn parse_let_binding<'a>() -> impl Parser<'a, LetBinding> {
         BoxedParser::new(
             trim_whitespace_around(parse_literal("=")).map(|_| Expr::Literal(LiteralExpr::Empty)),
         ),
-        BoxedParser::new(parse_statement()),
+        BoxedParser::new(parse_expr()),
         BoxedParser::new(parse_literal(";").map(|_| Expr::Literal(LiteralExpr::Empty))),
     ])
     .map(|results| LetBinding {
         identifier: ensure_is_identifier(results.get(2).unwrap().clone()),
         rhs: results.get(4).unwrap().clone(),
     })
+}
+
+pub fn parse_if_block_beginning<'a>() -> impl Parser<'a, Expr> {
+    sequence_of_monomorphic(vec![
+        BoxedParser::new(trim_whitespace_around(parse_literal("if")))
+            .map(|_| Expr::Literal(LiteralExpr::Empty)),
+        BoxedParser::new(trim_whitespace_around(parse_literal("(")))
+            .map(|_| Expr::Literal(LiteralExpr::Empty)),
+        BoxedParser::new(trim_whitespace_around(parse_expr())),
+        BoxedParser::new(trim_whitespace_around(parse_literal(")")))
+            .map(|_| Expr::Literal(LiteralExpr::Empty)),
+    ])
+    .map(|sequence| sequence.get(2).unwrap().clone())
+}
+
+pub fn parse_if_block<'a>(input: &'a str) -> ParseResult<'a, IfBlock> {
+    pair(
+        BoxedParser::new(parse_if_block_beginning()),
+        BoxedParser::new(trim_whitespace_around(parse_statement())),
+    )
+    .map(|(conditional_expr, statement)| IfBlock {
+        cond: conditional_expr,
+        truthy_statements: statement,
+        else_statements: None, // TODO
+    })
+    .parse(input)
 }
 
 pub fn ensure_is_identifier(e: Expr) -> Identifier {
@@ -154,7 +188,7 @@ pub fn parse_print_statement<'a>() -> impl Parser<'a, Expr> {
     sequence_of_monomorphic(vec![
         BoxedParser::new(parse_print_keyword()),
         BoxedParser::new(at_least_one_whitespace().map(|_| Expr::Literal(LiteralExpr::Empty))),
-        BoxedParser::new(parse_statement()),
+        BoxedParser::new(parse_expr()),
         BoxedParser::new(parse_literal(";").map(|_| Expr::Literal(LiteralExpr::Empty))),
     ])
     .map(|results| results.get(2).unwrap().clone())
@@ -163,18 +197,18 @@ pub fn parse_print_statement<'a>() -> impl Parser<'a, Expr> {
 pub fn parse_grouping_expr<'a>() -> impl Parser<'a, Expr> {
     triplet(
         trim_whitespace_around(parse_literal("(")),
-        parse_statement(),
+        parse_expr(),
         trim_whitespace_around(parse_literal(")")),
     )
     .map(|(_, expr, _)| Expr::Grouping(Box::new(expr)))
 }
 
 /// Poor man's lazy eval :{
-/// We can not call parse_statement directly when construction parse_grouping_expr
+/// We can not call parse_expr directly when construction parse_grouping_expr
 pub fn parse_grouping_expr_2<'a>(input: &'a str) -> ParseResult<'a, Expr> {
     let (rest, res) = triplet(
         trim_whitespace_around(parse_literal("(")),
-        parse_statement(),
+        parse_expr(),
         trim_whitespace_around(parse_literal(")")),
     )
     .parse(input)?;
