@@ -39,12 +39,15 @@ pub fn evaluate_block(declarations: &[Declaration], env: &Environment) -> Interp
 
 pub fn evaluate_if_block(if_block: &IfBlock, env: &Environment) -> InterpreterResult<FL_T> {
     let determinant = evaluate_expr(&if_block.cond, env)?;
-    let determinant_as_bool = cast_to_bool(&determinant);
+    let if_clause_condition = cast_to_bool(&determinant);
     let mut local_env = Environment::new(Some(&env));
 
     let mut last_result = FL_T::Unit;
-    if determinant_as_bool {
+    if if_clause_condition {
         last_result = evaluate_statement(&if_block.truthy_statement, &mut local_env)?;
+    } else if if_block.else_statement.is_some() {
+        last_result =
+            evaluate_statement(if_block.else_statement.as_ref().unwrap(), &mut local_env)?;
     }
 
     Ok(last_result)

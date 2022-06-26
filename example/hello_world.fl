@@ -4,10 +4,13 @@ print 2*3*4*5;
     let inner = 420;
     {
         print inner;
-        let inner = 200;
+        let inner = 620;
         print inner;
     }
 }
-if (1) {
-    print 2123232;
+
+if (-1) {
+    print 100;
+} else {
+    print 200; 
 }

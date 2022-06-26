@@ -152,3 +152,32 @@ fn test_parse_if_block() {
         result
     );
 }
+
+#[test]
+fn test_parse_if_block_with_else() {
+    let result = parse_if_block(
+        "
+        if (1) {
+            print 2;
+        } else {
+            print 3;
+        }
+        ",
+    );
+
+    assert_eq!(
+        Ok((
+            "",
+            IfBlock {
+                cond: Expr::Literal(LiteralExpr::NumberLiteral(Number(1))),
+                truthy_statement: Statement::Block(vec![Declaration::Statement(Statement::Print(
+                    Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))
+                ))]),
+                else_statement: Some(Statement::Block(vec![Declaration::Statement(
+                    Statement::Print(Expr::Literal(LiteralExpr::NumberLiteral(Number(3))))
+                )]))
+            }
+        )),
+        result
+    );
+}

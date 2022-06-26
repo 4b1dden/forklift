@@ -174,15 +174,15 @@ pub fn parse_else_clause<'a>() -> impl Parser<'a, Statement> {
 }
 
 pub fn parse_if_block<'a>(input: &'a str) -> ParseResult<'a, IfBlock> {
-    pair(
+    triplet(
         BoxedParser::new(parse_if_block_beginning()),
         BoxedParser::new(trim_whitespace_around(parse_statement())),
-        // BoxedParser::new(optional(trim_whitespace_around(parse_else_clause()))),
+        BoxedParser::new(optional(trim_whitespace_around(parse_else_clause()))),
     )
-    .map(|(conditional_expr, statement)| IfBlock {
+    .map(|(conditional_expr, statement, else_statement)| IfBlock {
         cond: conditional_expr,
         truthy_statement: statement,
-        else_statement: None,
+        else_statement,
     })
     .parse(input)
 }
