@@ -8,7 +8,10 @@ todo:
     - [x] scoped blocks
     - [x] if statements
     - [x] else statements
-    - [] add Strings
+    - [x] add Strings
+    - [] logical operators
+    - [] add while loop
+    - [] add for loop 
     - [] add floats
     - [] add functions
 - [] interpreter
@@ -16,7 +19,10 @@ todo:
     - [x] scoped blocks
     - [x] if statements
     - [x] else statements
-    - [] strings
+    - [x] strings
+    - [] logical operators
+    - [] while loop
+    - [] for loop 
     - [] floats
     - [] functions
 - [] types? 
