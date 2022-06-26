@@ -97,13 +97,23 @@ pub fn evaluate_unary_expr(unary_expr: &UnaryExpr, env: &Environment) -> Interpr
     }
 }
 
-fn apply_bin_op_to_bin_expr(left: FL_T, op: &BinaryOperator, right: FL_T) -> FL_T {
+fn apply_bin_op_to_bin_expr(
+    left: FL_T,
+    op: &BinaryOperator,
+    right: FL_T,
+) -> InterpreterResult<FL_T> {
     match (left, right) {
         (
             FL_T::Primitive(FL_T_Primitive::Integer32(l_num)),
             FL_T::Primitive(FL_T_Primitive::Integer32(r_num)),
-        ) => FL_T::Primitive(FL_T_Primitive::Integer32(compute_bin_op(l_num, op, r_num))),
-        _ => todo!(),
+        ) => Ok(FL_T::Primitive(FL_T_Primitive::Integer32(compute_bin_op(
+            l_num, op, r_num,
+        )))),
+        (
+            FL_T::Primitive(FL_T_Primitive::Str(l_str)),
+            FL_T::Primitive(FL_T_Primitive::Str(r_str)),
+        ) => apply_str_bin_op(l_str, op, r_str),
+        _ => todo!("apply_bin_op_to_bin_expr"),
     }
 }
 
@@ -122,12 +132,26 @@ where
     }
 }
 
+pub fn apply_str_bin_op(
+    l_str: String,
+    op: &BinaryOperator,
+    r_str: String,
+) -> InterpreterResult<FL_T> {
+    match op {
+        BinaryOperator::Plus => Ok(FL_T::Primitive(FL_T_Primitive::Str(String::from(
+            l_str + &r_str,
+        )))),
+        // probably not the most optimal way to concat strs because of double conversion but w/e
+        _ => Err(format!("Can not apply {:#?} to String and String", op)),
+    }
+}
+
 pub fn evaluate_binary_expr(expr: &BinaryExpr, env: &Environment) -> InterpreterResult<FL_T> {
     let left = evaluate_expr(&expr.lhs, env)?;
     let right = evaluate_expr(&expr.rhs, env)?;
     let op = &expr.op;
 
-    Ok(apply_bin_op_to_bin_expr(left, op, right))
+    apply_bin_op_to_bin_expr(left, op, right)
 }
 
 pub fn evaluate_grouping_expr(expr: &Box<Expr>, env: &Environment) -> InterpreterResult<FL_T> {
