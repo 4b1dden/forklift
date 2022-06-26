@@ -10,9 +10,19 @@ use super::{any_of_monomorphic, map, optional, pair, triplet, ParseResult, Strin
 pub fn parse_number<'a>() -> impl Parser<'a, &'a str> {
     move |input: &'a str| {
         let mut idx: usize = 0;
+        let mut has_dot = false;
 
         while let Some(ch) = input.chars().nth(idx) {
-            if ch.is_digit(10) {
+            if ch == '.' {
+                if !has_dot {
+                    has_dot = true;
+                    idx += 1;
+                } else {
+                    return Err(String::from(
+                        "Float64 can not have >= 1 dot in its definition",
+                    ));
+                }
+            } else if ch.is_digit(10) {
                 idx += 1;
             } else {
                 break;
@@ -67,6 +77,7 @@ pub fn parse_number_as_expr<'a>() -> impl Parser<'a, Expr> {
         let res = parse_number().parse(input);
         match res {
             Ok((rest, m)) => {
+                let has_dot = m.contains(".");
                 let parsed: Result<i32, String> = m
                     .parse::<i32>()
                     .map_err(|_| String::from("Could not parse to i32"));

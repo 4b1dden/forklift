@@ -16,6 +16,14 @@ fn test_parse_number() {
 }
 
 #[test]
+fn test_parse_number_float() {
+    let parser = parse_number();
+
+    assert_eq!(Ok(("", "12.34")), parser.parse("12.34"));
+    assert!(parser.parse("12.34.34").is_err());
+}
+
+#[test]
 fn test_parse_identifier() {
     let src = "foo_bar123";
     let result = parse_identifier().parse(src).unwrap();

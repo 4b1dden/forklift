@@ -21,7 +21,7 @@ pub fn evaluate_expr(expr: &Expr, env: &Environment) -> InterpreterResult<FL_T> 
 pub fn evaluate_print_statement(expr: &Expr, env: &Environment) -> InterpreterResult<FL_T> {
     let evaluated = evaluate_expr(expr, env)?;
 
-    println!("{:?}", evaluated);
+    println!("{:#?}", evaluated);
 
     Ok(evaluated)
 }
