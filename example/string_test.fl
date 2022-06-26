@@ -1,0 +1,3 @@
+let woo = 1;
+let foo = "Hello" + "World";
+let hey = woo + 2;

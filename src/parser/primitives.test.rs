@@ -1,9 +1,10 @@
 use crate::parser::{
     parse_binary_expression, parse_identifier, parse_let_binding, parse_literal, parse_number,
     BinaryExpr, BinaryOperator, Expr, Identifier, IfBlock, LetBinding, LiteralExpr, Number, Parser,
+    StringLiteral,
 };
 
-use super::{parse_grouping_expr, parse_if_block, parse_print_statement};
+use super::{parse_grouping_expr, parse_if_block, parse_print_statement, parse_string_literal};
 use crate::grammar::{Declaration, Statement};
 
 #[test]
@@ -179,5 +180,21 @@ fn test_parse_if_block_with_else() {
             }
         )),
         result
+    );
+}
+
+#[test]
+fn test_parse_string_literal() {
+    let parser = parse_string_literal();
+    let src = r#""Hello, world!""#;
+
+    assert_eq!(
+        Ok((
+            "",
+            Expr::Literal(LiteralExpr::StringLiteral(StringLiteral(String::from(
+                "Hello, world!"
+            ))))
+        )),
+        parser.parse(src)
     );
 }

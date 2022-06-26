@@ -9,8 +9,4 @@ print 2*3*4*5;
     }
 }
 
-if (-1) {
-    print 100;
-} else {
-    print 200; 
-}
+let foo = 'Hello';

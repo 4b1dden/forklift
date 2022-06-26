@@ -5,7 +5,7 @@ use crate::parser::{
     Identifier, Keywords, LiteralExpr, Number, Parser,
 };
 
-use super::{any_of_monomorphic, map, optional, pair, triplet, ParseResult};
+use super::{any_of_monomorphic, map, optional, pair, triplet, ParseResult, StringLiteral};
 
 pub fn parse_number<'a>() -> impl Parser<'a, &'a str> {
     move |input: &'a str| {
@@ -224,6 +224,38 @@ pub fn parse_grouping_expr_2<'a>(input: &'a str) -> ParseResult<'a, Expr> {
     .parse(input)?;
 
     Ok((rest, Expr::Grouping(Box::new(res.1))))
+}
+
+pub fn parse_string_literal<'a>() -> impl Parser<'a, Expr> {
+    move |input: &'a str| {
+        let p = trim_whitespace_around(parse_literal("\""));
+        let (rest, matched) = p.parse(input)?;
+
+        let mut len: usize = 0;
+        let mut chars = rest.chars();
+
+        loop {
+            match chars.next() {
+                Some(ch) => {
+                    if ch != '"' {
+                        len += 1;
+                    } else {
+                        break;
+                    }
+                }
+                None => return Err(String::from("UnexpectedEOF [parse_string_literal]")),
+            }
+        }
+
+        let string = &input[1..len + 1];
+        let rest = &input[len + 2..];
+        Ok((
+            rest,
+            Expr::Literal(LiteralExpr::StringLiteral(StringLiteral(
+                string.to_string(),
+            ))),
+        ))
+    }
 }
 
 #[cfg(test)]

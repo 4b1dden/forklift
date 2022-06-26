@@ -2,7 +2,7 @@ use std::fmt::Debug;
 
 use crate::parser::{
     any_of_monomorphic, either, left, one_or_more, pair, parse_grouping_expr_2, parse_identifier,
-    parse_literal, parse_number, right, triplet, zero_or_more,
+    parse_literal, parse_number, parse_string_literal, right, triplet, zero_or_more,
 };
 
 use super::{parse_identifier_as_expr, parse_number_as_expr};
@@ -88,7 +88,11 @@ pub enum Expr {
 }
 
 pub fn parse_expr_literal<'a>() -> impl Parser<'a, Expr> {
-    either(parse_identifier_as_expr(), parse_number_as_expr())
+    any_of_monomorphic(vec![
+        BoxedParser::new(parse_identifier_as_expr()),
+        BoxedParser::new(parse_number_as_expr()),
+        BoxedParser::new(parse_string_literal()),
+    ])
 }
 
 pub fn parse_single_statement<'a>() -> impl Parser<'a, Expr> {
@@ -98,6 +102,7 @@ pub fn parse_single_statement<'a>() -> impl Parser<'a, Expr> {
         BoxedParser::new(parse_grouping_expr_2),
         BoxedParser::new(parse_unary_expression),
         BoxedParser::new(parse_expr_literal()),
+        BoxedParser::new(parse_string_literal()),
     ])
 }
 
