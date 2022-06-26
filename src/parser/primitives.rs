@@ -5,7 +5,7 @@ use crate::parser::{
     Identifier, Keywords, LiteralExpr, Number, Parser,
 };
 
-use super::{any_of_monomorphic, map, pair, triplet, ParseResult};
+use super::{any_of_monomorphic, map, optional, pair, triplet, ParseResult};
 
 pub fn parse_number<'a>() -> impl Parser<'a, &'a str> {
     move |input: &'a str| {
@@ -115,7 +115,7 @@ pub struct LetBinding {
 pub struct IfBlock {
     pub cond: Expr,
     pub truthy_statement: Statement,
-    pub else_statement: Option<Vec<Statement>>,
+    pub else_statement: Option<Statement>,
 }
 
 // TODO: unify this with other "statement" parser in grammar
@@ -164,15 +164,25 @@ pub fn parse_if_block_beginning<'a>() -> impl Parser<'a, Expr> {
     .map(|sequence| sequence.get(2).unwrap().clone())
 }
 
+pub fn parse_else_clause<'a>() -> impl Parser<'a, Statement> {
+    pair(
+        BoxedParser::new(trim_whitespace_around(parse_literal("else")))
+            .map(|_| Expr::Literal(LiteralExpr::Empty)),
+        BoxedParser::new(parse_statement()),
+    )
+    .map(|(_, statement)| statement)
+}
+
 pub fn parse_if_block<'a>(input: &'a str) -> ParseResult<'a, IfBlock> {
     pair(
         BoxedParser::new(parse_if_block_beginning()),
         BoxedParser::new(trim_whitespace_around(parse_statement())),
+        // BoxedParser::new(optional(trim_whitespace_around(parse_else_clause()))),
     )
     .map(|(conditional_expr, statement)| IfBlock {
         cond: conditional_expr,
         truthy_statement: statement,
-        else_statement: None, // TODO
+        else_statement: None,
     })
     .parse(input)
 }

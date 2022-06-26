@@ -1,6 +1,6 @@
 use crate::parser::{
-    either, left, one_or_more, pair, parse_literal, parse_number, right, sequence_of_monomorphic,
-    zero_or_more, BoxedParser, Parser,
+    either, left, one_or_more, optional, pair, parse_literal, parse_number, right,
+    sequence_of_monomorphic, zero_or_more, BoxedParser, Parser,
 };
 
 #[test]
@@ -85,4 +85,35 @@ fn test_sequence_of_monomorphic<'a>() {
     );
 
     assert!(combined.parse("foo123bar_").is_err());
+}
+
+#[test]
+fn test_optional() {
+    let parser = optional(parse_literal("foo"));
+
+    assert_eq!(Ok(("123", None)), parser.parse("123"));
+    assert_eq!(Ok(("123", Some("foo"))), parser.parse("foo123"));
+}
+
+#[test]
+fn test_optional_in_sequence() {
+    let parser = sequence_of_monomorphic(vec![
+        BoxedParser::new(parse_literal("foo").map(Option::Some)),
+        BoxedParser::new(optional(parse_literal("_"))),
+        BoxedParser::new(parse_literal("bar").map(Option::Some)),
+    ]);
+
+    assert_eq!(
+        Ok(("..", vec![Some("foo"), None, Some("bar")])),
+        parser.parse("foobar..")
+    );
+    assert_eq!(
+        Ok(("..", vec![Some("foo"), Some("_"), Some("bar")])),
+        parser.parse("foo_bar..")
+    );
+
+    assert_eq!(
+        Err(String::from("expected foo, got wro")),
+        parser.parse("wrong start in non-optional")
+    );
 }
