@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::ops::{Add, Div, Mul, Sub};
 
 use crate::grammar::{Declaration, Statement};
@@ -21,7 +22,7 @@ pub fn evaluate_expr(expr: &Expr, env: &Environment) -> InterpreterResult<FL_T> 
 pub fn evaluate_print_statement(expr: &Expr, env: &Environment) -> InterpreterResult<FL_T> {
     let evaluated = evaluate_expr(expr, env)?;
 
-    println!("{:#?}", evaluated);
+    println!("{}", evaluated);
 
     Ok(evaluated)
 }
@@ -57,6 +58,25 @@ pub fn evaluate_if_block(if_block: &IfBlock, env: &Environment) -> InterpreterRe
 pub enum FL_T {
     Primitive(FL_T_Primitive),
     Unit,
+}
+
+impl Display for FL_T {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FL_T::Primitive(FL_T_Primitive::Str(string)) => {
+                write!(f, "{}", string)
+            }
+            FL_T::Primitive(FL_T_Primitive::Integer32(int32)) => {
+                write!(f, "{}", int32)
+            }
+            FL_T::Primitive(FL_T_Primitive::Bool(b)) => {
+                write!(f, "{}", b)
+            }
+            FL_T::Unit => {
+                write!(f, "()")
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]

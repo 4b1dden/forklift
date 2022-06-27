@@ -11,3 +11,7 @@ if ((2*l) > 20) {
 } else {
     print "No";
 }
+
+if (f == 0) {
+    print "f is 0";
+}
