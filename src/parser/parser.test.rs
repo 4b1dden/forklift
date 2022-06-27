@@ -6,7 +6,7 @@ use crate::parser::{
 };
 
 fn mock_number_literal_expr(num: i32) -> Expr {
-    Expr::Literal(LiteralExpr::NumberLiteral(Number(num)))
+    Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(num)))
 }
 
 #[test]
@@ -60,13 +60,21 @@ fn test_parse_binary_expression() {
             "",
             (Expr::Binary(BinaryExpr {
                 lhs: Box::new(Expr::Binary(BinaryExpr {
-                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(3)))),
-                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(100)))),
+                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                        Number::Integer32(3)
+                    ))),
+                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                        Number::Integer32(100)
+                    ))),
                     op: BinaryOperator::Mul
                 })),
                 rhs: Box::new(Expr::Binary(BinaryExpr {
-                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(4)))),
-                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))),
+                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                        Number::Integer32(4)
+                    ))),
+                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                        Number::Integer32(2)
+                    ))),
                     op: BinaryOperator::Mul
                 })),
                 op: BinaryOperator::Plus
@@ -104,7 +112,10 @@ fn test_parse_expr_literal() {
     );
     assert_eq!(
         parser.parse("123").unwrap(),
-        ("", Expr::Literal(LiteralExpr::NumberLiteral(Number(123))))
+        (
+            "",
+            Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(123)))
+        )
     );
 }
 
@@ -118,7 +129,9 @@ fn test_parse_unary_expr() {
             "",
             Expr::Unary(UnaryExpr {
                 op: UnaryOperator::Minus,
-                expr: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(3)))),
+                expr: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                    Number::Integer32(3)
+                ))),
             })
         ))
     );

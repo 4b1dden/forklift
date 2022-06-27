@@ -12,7 +12,7 @@ fn empty_env() -> Environment<'static> {
 
 #[test]
 fn test_literal_expr() {
-    let to_intepret = Expr::Literal(LiteralExpr::NumberLiteral(Number(3)));
+    let to_intepret = Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(3)));
 
     assert_eq!(
         evaluate_expr(&to_intepret, &empty_env()),
@@ -24,7 +24,9 @@ fn test_literal_expr() {
 fn test_unary_expr() {
     let inner = Expr::Unary(UnaryExpr {
         op: UnaryOperator::Minus,
-        expr: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(5)))),
+        expr: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+            Number::Integer32(5),
+        ))),
     });
 
     let to_intepret = inner.clone();
@@ -48,14 +50,20 @@ fn test_unary_expr() {
 fn test_binary_expr() {
     // TODO: extend test cases
     let inner = Expr::Binary(BinaryExpr {
-        lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(5)))),
-        rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(10)))),
+        lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+            Number::Integer32(5),
+        ))),
+        rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+            Number::Integer32(10),
+        ))),
         op: BinaryOperator::Mul,
     });
 
     let nested = Expr::Binary(BinaryExpr {
         lhs: Box::new(inner.clone()),
-        rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(3)))),
+        rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+            Number::Integer32(3),
+        ))),
         op: BinaryOperator::Plus,
     });
 

@@ -78,13 +78,21 @@ pub fn parse_number_as_expr<'a>() -> impl Parser<'a, Expr> {
         match res {
             Ok((rest, m)) => {
                 let has_dot = m.contains(".");
-                let parsed: Result<i32, String> = m
-                    .parse::<i32>()
-                    .map_err(|_| String::from("Could not parse to i32"));
-                match parsed {
-                    Ok(num) => Ok((rest, Expr::Literal(LiteralExpr::NumberLiteral(Number(num))))),
-                    Err(e) => Err(e),
-                }
+                let literal_expr = if has_dot {
+                    let parsed: Result<f64, String> = m
+                        .parse::<f64>()
+                        .map_err(|_| String::from("Could not parse to i32"));
+
+                    LiteralExpr::NumberLiteral(Number::Float64(parsed?))
+                } else {
+                    let parsed: Result<i32, String> = m
+                        .parse::<i32>()
+                        .map_err(|_| String::from("Could not parse to i32"));
+
+                    LiteralExpr::NumberLiteral(Number::Integer32(parsed?))
+                };
+
+                Ok((rest, Expr::Literal(literal_expr)))
             }
             Err(e) => Err(e),
         }

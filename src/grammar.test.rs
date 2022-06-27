@@ -16,11 +16,11 @@ fn test_parse_declaration() {
             vec![
                 Declaration::Let(LetBinding {
                     identifier: Identifier(String::from("a")),
-                    rhs: Expr::Literal(LiteralExpr::NumberLiteral(Number(2))),
+                    rhs: Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(2))),
                 }),
                 Declaration::Let(LetBinding {
                     identifier: Identifier(String::from("b")),
-                    rhs: Expr::Literal(LiteralExpr::NumberLiteral(Number(3))),
+                    rhs: Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(3))),
                 })
             ]
         ))
@@ -35,9 +35,9 @@ fn test_parse_statement() {
         Ok((
             "",
             Statement::If(Box::new(IfBlock {
-                cond: Expr::Literal(LiteralExpr::NumberLiteral(Number(1))),
+                cond: Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(1))),
                 truthy_statement: Statement::Block(vec![Declaration::Statement(Statement::Print(
-                    Expr::Literal(LiteralExpr::NumberLiteral(Number(10)))
+                    Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(10)))
                 ))]),
                 else_statement: None
             }))

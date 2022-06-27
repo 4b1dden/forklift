@@ -1,7 +1,7 @@
 use crate::parser::{
     parse_binary_expression, parse_identifier, parse_let_binding, parse_literal, parse_number,
-    BinaryExpr, BinaryOperator, Expr, Identifier, IfBlock, LetBinding, LiteralExpr, Number, Parser,
-    StringLiteral,
+    parse_number_as_expr, BinaryExpr, BinaryOperator, Expr, Identifier, IfBlock, LetBinding,
+    LiteralExpr, Number, Parser, StringLiteral,
 };
 
 use super::{parse_grouping_expr, parse_if_block, parse_print_statement, parse_string_literal};
@@ -19,8 +19,19 @@ fn test_parse_number() {
 fn test_parse_number_float() {
     let parser = parse_number();
 
-    assert_eq!(Ok(("", "12.34")), parser.parse("12.34"));
+    let src = "12.34";
+    let result = parser.parse(src);
+    assert_eq!(Ok(("", "12.34")), result);
     assert!(parser.parse("12.34.34").is_err());
+
+    let as_expr = parse_number_as_expr().parse(src);
+    assert_eq!(
+        Ok((
+            "",
+            Expr::Literal(LiteralExpr::NumberLiteral(Number::Float64(12.34)))
+        )),
+        as_expr
+    );
 }
 
 #[test]
@@ -56,9 +67,13 @@ fn test_parse_let_binding() {
             LetBinding {
                 identifier: Identifier(String::from("foo")),
                 rhs: Expr::Binary(BinaryExpr {
-                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(1)))),
+                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                        Number::Integer32(1)
+                    ))),
                     op: BinaryOperator::Plus,
-                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))),
+                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                        Number::Integer32(2)
+                    ))),
                 })
             }
         )
@@ -82,9 +97,13 @@ fn test_parse_grouping_expr() {
         Ok((
             "",
             Expr::Grouping(Box::new(Expr::Binary(BinaryExpr {
-                lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(1)))),
+                lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                    Number::Integer32(1)
+                ))),
                 op: BinaryOperator::Plus,
-                rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))),
+                rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                    Number::Integer32(2)
+                ))),
             })))
         )),
         parser.parse("(1+2)")
@@ -94,7 +113,7 @@ fn test_parse_grouping_expr() {
         Ok((
             "",
             Expr::Grouping(Box::new(Expr::Grouping(Box::new(Expr::Literal(
-                LiteralExpr::NumberLiteral(Number(1))
+                LiteralExpr::NumberLiteral(Number::Integer32(1))
             )))))
         )),
         parser.parse("((1))"),
@@ -110,12 +129,18 @@ fn test_parse_binary_with_grouping() {
             "",
             Expr::Binary(BinaryExpr {
                 lhs: Box::new(Expr::Grouping(Box::new(Expr::Binary(BinaryExpr {
-                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(1)))),
+                    lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                        Number::Integer32(1)
+                    ))),
                     op: BinaryOperator::Plus,
-                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))),
+                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                        Number::Integer32(2)
+                    ))),
                 })))),
                 op: BinaryOperator::Mul,
-                rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(3))))
+                rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                    Number::Integer32(3)
+                )))
             })
         )),
         parser.parse("(1+2)*3")
@@ -130,9 +155,13 @@ fn test_parse_print_statement() {
         Ok((
             "",
             Expr::Binary(BinaryExpr {
-                lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(1)))),
+                lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                    Number::Integer32(1)
+                ))),
                 op: BinaryOperator::Plus,
-                rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))),
+                rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                    Number::Integer32(2)
+                ))),
             })
         )),
         parser.parse("print 1+2;")
@@ -151,9 +180,9 @@ fn test_parse_if_block() {
         Ok((
             "",
             IfBlock {
-                cond: Expr::Literal(LiteralExpr::NumberLiteral(Number(1))),
+                cond: Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(1))),
                 truthy_statement: Statement::Block(vec![Declaration::Statement(Statement::Print(
-                    Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))
+                    Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(2)))
                 ))]),
                 else_statement: None
             }
@@ -178,12 +207,14 @@ fn test_parse_if_block_with_else() {
         Ok((
             "",
             IfBlock {
-                cond: Expr::Literal(LiteralExpr::NumberLiteral(Number(1))),
+                cond: Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(1))),
                 truthy_statement: Statement::Block(vec![Declaration::Statement(Statement::Print(
-                    Expr::Literal(LiteralExpr::NumberLiteral(Number(2)))
+                    Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(2)))
                 ))]),
                 else_statement: Some(Statement::Block(vec![Declaration::Statement(
-                    Statement::Print(Expr::Literal(LiteralExpr::NumberLiteral(Number(3))))
+                    Statement::Print(Expr::Literal(LiteralExpr::NumberLiteral(
+                        Number::Integer32(3)
+                    )))
                 )]))
             }
         )),

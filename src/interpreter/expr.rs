@@ -5,7 +5,8 @@ use std::ops::{Add, Div, Mul, Sub};
 use crate::grammar::{Declaration, Statement};
 use crate::interpreter::{eval_declaration, Environment};
 use crate::parser::{
-    BinaryExpr, BinaryOperator, Expr, IfBlock, LetBinding, LiteralExpr, UnaryExpr, UnaryOperator,
+    BinaryExpr, BinaryOperator, Expr, IfBlock, LetBinding, LiteralExpr, Number, UnaryExpr,
+    UnaryOperator,
 };
 
 use super::{evaluate_statement, InterpreterResult};
@@ -72,6 +73,9 @@ impl Display for FL_T {
             FL_T::Primitive(FL_T_Primitive::Bool(b)) => {
                 write!(f, "{}", b)
             }
+            FL_T::Primitive(FL_T_Primitive::Float64(float64)) => {
+                write!(f, "{}", float64)
+            }
             FL_T::Unit => {
                 write!(f, "()")
             }
@@ -84,6 +88,7 @@ pub enum FL_T_Primitive {
     Str(String),
     Bool(bool),
     Integer32(i32),
+    Float64(f64),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -99,7 +104,12 @@ pub fn evaluate_literal_expr(expr: &LiteralExpr, env: &Environment) -> Interpret
             .ok_or(format!("{} not found", ident.0))
             .cloned(),
         LiteralExpr::Keyword(keyword) => todo!(),
-        LiteralExpr::NumberLiteral(num) => Ok(FL_T::Primitive(FL_T_Primitive::Integer32(num.0))),
+        LiteralExpr::NumberLiteral(Number::Integer32(num)) => {
+            Ok(FL_T::Primitive(FL_T_Primitive::Integer32(*num)))
+        }
+        LiteralExpr::NumberLiteral(Number::Float64(float64)) => {
+            Ok(FL_T::Primitive(FL_T_Primitive::Float64(*float64)))
+        }
         LiteralExpr::StringLiteral(s) => Ok(FL_T::Primitive(FL_T_Primitive::Str(s.0.clone()))),
         LiteralExpr::Empty => todo!(),
     }
@@ -138,6 +148,10 @@ fn apply_bin_op_to_bin_expr(
             FL_T::Primitive(FL_T_Primitive::Str(l_str)),
             FL_T::Primitive(FL_T_Primitive::Str(r_str)),
         ) => apply_str_bin_op(l_str, op, r_str),
+        (
+            FL_T::Primitive(FL_T_Primitive::Float64(l_f64)),
+            FL_T::Primitive(FL_T_Primitive::Float64(r_f64)),
+        ) => Ok(compute_bin_op_f64(l_f64, op, r_f64)),
         _ => todo!("apply_bin_op_to_bin_expr"),
     }
 }
@@ -149,6 +163,22 @@ fn compute_bin_op(l: i32, op: &BinaryOperator, r: i32) -> FL_T {
         BinaryOperator::Plus => FL_T::Primitive(FL_T_Primitive::Integer32(l + r)),
         BinaryOperator::Mul => FL_T::Primitive(FL_T_Primitive::Integer32(l * r)),
         BinaryOperator::Div => FL_T::Primitive(FL_T_Primitive::Integer32(l / r)),
+
+        BinaryOperator::Greater => downcast_bin_comparison_to_fl_t_i32(|| l > r),
+        BinaryOperator::GreaterEq => downcast_bin_comparison_to_fl_t_i32(|| l >= r),
+        BinaryOperator::Less => downcast_bin_comparison_to_fl_t_i32(|| l < r),
+        BinaryOperator::LessEq => downcast_bin_comparison_to_fl_t_i32(|| l <= r),
+        BinaryOperator::BangEq => downcast_bin_comparison_to_fl_t_i32(|| l != r),
+        BinaryOperator::EqEq => downcast_bin_comparison_to_fl_t_i32(|| l == r),
+    }
+}
+
+fn compute_bin_op_f64(l: f64, op: &BinaryOperator, r: f64) -> FL_T {
+    match op {
+        BinaryOperator::Minus => FL_T::Primitive(FL_T_Primitive::Float64(l - r)),
+        BinaryOperator::Plus => FL_T::Primitive(FL_T_Primitive::Float64(l + r)),
+        BinaryOperator::Mul => FL_T::Primitive(FL_T_Primitive::Float64(l * r)),
+        BinaryOperator::Div => FL_T::Primitive(FL_T_Primitive::Float64(l / r)),
 
         BinaryOperator::Greater => downcast_bin_comparison_to_fl_t_i32(|| l > r),
         BinaryOperator::GreaterEq => downcast_bin_comparison_to_fl_t_i32(|| l >= r),
@@ -206,6 +236,7 @@ pub fn cast_to_bool(x: &FL_T) -> bool {
         FL_T::Primitive(FL_T_Primitive::Integer32(int32)) => *int32 > 0,
         FL_T::Primitive(FL_T_Primitive::Str(string)) => string != "",
         FL_T::Primitive(FL_T_Primitive::Bool(flag)) => *flag,
+        FL_T::Primitive(FL_T_Primitive::Float64(float64)) => *float64 > 0_f64,
         FL_T::Unit => false,
     }
 }

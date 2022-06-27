@@ -144,7 +144,10 @@ pub struct Identifier(pub String);
 pub struct StringLiteral(pub String);
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Number(pub i32);
+pub enum Number {
+    Integer32(i32),
+    Float64(f64),
+}
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BinaryExpr {

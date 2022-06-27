@@ -1,0 +1,10 @@
+let a = 12.3;
+let b = 0.2;
+
+let sum = a + b;
+print sum;
+
+let left = 12.456;
+if (left < 16.052) {
+    print "Is less";
+}
