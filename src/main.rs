@@ -7,7 +7,6 @@ use std::process::exit;
 mod grammar;
 mod interpreter;
 mod parser;
-mod tokenizer;
 
 use crate::grammar::parse_declaration;
 use crate::interpreter::{Environment, Interpreter};
