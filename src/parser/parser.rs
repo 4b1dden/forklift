@@ -45,10 +45,19 @@ pub trait Parser<'a, Output> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum BinaryOperator {
+    // Arithmetic
     Plus,
     Minus,
     Div,
     Mul,
+
+    //Logical
+    EqEq,
+    BangEq,
+    Less,
+    LessEq,
+    Greater,
+    GreaterEq,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -64,7 +73,13 @@ impl From<&str> for BinaryOperator {
             "-" => BinaryOperator::Minus,
             "/" => BinaryOperator::Div,
             "*" => BinaryOperator::Mul,
-            _ => panic!("not implemented"),
+            "==" => BinaryOperator::EqEq,
+            "!=" => BinaryOperator::BangEq,
+            "<=" => BinaryOperator::LessEq,
+            "<" => BinaryOperator::Less,
+            ">" => BinaryOperator::Greater,
+            ">=" => BinaryOperator::GreaterEq,
+            _ => panic!("unknown bin operator"),
         }
     }
 }
@@ -219,7 +234,7 @@ fn sequence_of() {
 }
 
 fn bin_operand<'a>() -> impl Parser<'a, &'a str> {
-    let operands = vec!["+", "-", "/", "*"];
+    let operands = vec!["+", "-", "/", "*", "==", "!=", "<", "<=", ">", ">="];
     any_of_monomorphic(
         operands
             .iter()
@@ -342,8 +357,13 @@ pub enum BinExpInfix {
 
 fn get_single_operator_precedence(op: &BinaryOperator) -> i32 {
     match op {
-        BinaryOperator::Plus | BinaryOperator::Minus => 1,
-        BinaryOperator::Mul | BinaryOperator::Div => 2,
+        BinaryOperator::EqEq | BinaryOperator::BangEq => 1,
+        BinaryOperator::Less
+        | BinaryOperator::LessEq
+        | BinaryOperator::Greater
+        | BinaryOperator::GreaterEq => 2,
+        BinaryOperator::Plus | BinaryOperator::Minus => 3,
+        BinaryOperator::Mul | BinaryOperator::Div => 4,
     }
 }
 

@@ -1,5 +1,6 @@
 let a = 1 + 2;
-print 2*3*4*5;
+let bool_int_true = 10 > 5;
+let bool_int_false = 5 == 6;
 {
     let inner = 420;
     {

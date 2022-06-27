@@ -62,7 +62,14 @@ pub enum FL_T {
 #[derive(Debug, Clone, PartialEq)]
 pub enum FL_T_Primitive {
     Str(String),
+    Bool(bool),
     Integer32(i32),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum FL_T_Bool {
+    True,
+    False,
 }
 
 pub fn evaluate_literal_expr(expr: &LiteralExpr, env: &Environment) -> InterpreterResult<FL_T> {
@@ -106,9 +113,7 @@ fn apply_bin_op_to_bin_expr(
         (
             FL_T::Primitive(FL_T_Primitive::Integer32(l_num)),
             FL_T::Primitive(FL_T_Primitive::Integer32(r_num)),
-        ) => Ok(FL_T::Primitive(FL_T_Primitive::Integer32(compute_bin_op(
-            l_num, op, r_num,
-        )))),
+        ) => Ok(compute_bin_op(l_num, op, r_num)),
         (
             FL_T::Primitive(FL_T_Primitive::Str(l_str)),
             FL_T::Primitive(FL_T_Primitive::Str(r_str)),
@@ -117,18 +122,34 @@ fn apply_bin_op_to_bin_expr(
     }
 }
 
-fn compute_bin_op<T>(l: T, op: &BinaryOperator, r: T) -> T
-where
-    T: Mul<Output = T>,
-    T: Div<Output = T>,
-    T: Add<Output = T>,
-    T: Sub<Output = T>,
-{
+// TODO: expand back to generics later probably
+fn compute_bin_op(l: i32, op: &BinaryOperator, r: i32) -> FL_T {
     match op {
-        BinaryOperator::Minus => l - r,
-        BinaryOperator::Plus => l + r,
-        BinaryOperator::Mul => l * r,
-        BinaryOperator::Div => l / r,
+        BinaryOperator::Minus => FL_T::Primitive(FL_T_Primitive::Integer32(l - r)),
+        BinaryOperator::Plus => FL_T::Primitive(FL_T_Primitive::Integer32(l + r)),
+        BinaryOperator::Mul => FL_T::Primitive(FL_T_Primitive::Integer32(l * r)),
+        BinaryOperator::Div => FL_T::Primitive(FL_T_Primitive::Integer32(l / r)),
+
+        BinaryOperator::Greater => downcast_bin_comparison_to_fl_t_i32(|| l > r),
+        BinaryOperator::GreaterEq => downcast_bin_comparison_to_fl_t_i32(|| l >= r),
+        BinaryOperator::Less => downcast_bin_comparison_to_fl_t_i32(|| l < r),
+        BinaryOperator::LessEq => downcast_bin_comparison_to_fl_t_i32(|| l <= r),
+        BinaryOperator::BangEq => downcast_bin_comparison_to_fl_t_i32(|| l != r),
+        BinaryOperator::EqEq => downcast_bin_comparison_to_fl_t_i32(|| l == r),
+    }
+}
+
+fn downcast_bin_comparison_to_fl_t_i32<F>(f: F) -> FL_T
+where
+    F: Fn() -> bool,
+{
+    const TRUE_INT_VAL: i32 = 1;
+    const FALSE_INT_VAL: i32 = 0;
+
+    if f() {
+        FL_T::Primitive(FL_T_Primitive::Integer32(TRUE_INT_VAL))
+    } else {
+        FL_T::Primitive(FL_T_Primitive::Integer32(FALSE_INT_VAL))
     }
 }
 
@@ -164,6 +185,7 @@ pub fn cast_to_bool(x: &FL_T) -> bool {
     match x {
         FL_T::Primitive(FL_T_Primitive::Integer32(int32)) => *int32 > 0,
         FL_T::Primitive(FL_T_Primitive::Str(string)) => string != "",
+        FL_T::Primitive(FL_T_Primitive::Bool(flag)) => *flag,
         FL_T::Unit => false,
     }
 }

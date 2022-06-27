@@ -1,0 +1,8 @@
+if (1) {
+    print 1;
+} else {
+    print 2;
+}
+
+if (1) print 3;
+if (-1) print 10; else print -20;
