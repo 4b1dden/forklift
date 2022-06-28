@@ -2,6 +2,7 @@ let a = 1 + 2;
 let bool_int_true = 10 > 5;
 let bool_int_false = 5 == 6;
 {
+    print a;
     let inner = 420;
     {
         print inner;

@@ -1,3 +1,4 @@
+use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::ops::{Add, Div, Mul, Sub};
@@ -6,7 +7,7 @@ use crate::grammar::{Declaration, Statement};
 use crate::interpreter::{eval_declaration, Environment};
 use crate::parser::{
     BinaryExpr, BinaryOperator, Expr, IfBlock, LetBinding, LiteralExpr, Number, UnaryExpr,
-    UnaryOperator,
+    UnaryOperator, WhileLoop,
 };
 
 use super::{evaluate_statement, InterpreterResult};
@@ -28,12 +29,16 @@ pub fn evaluate_print_statement(expr: &Expr, env: &Environment) -> InterpreterRe
     Ok(evaluated)
 }
 
-pub fn evaluate_block(declarations: &[Declaration], env: &Environment) -> InterpreterResult<FL_T> {
+pub fn evaluate_block(
+    declarations: &[Declaration],
+    env: &mut Environment,
+) -> InterpreterResult<FL_T> {
     let mut local_env = Environment::new(Some(&env));
+    local_env.bindings = env.bindings.clone();
 
     let mut last_result = FL_T::Unit;
     for declaration in declarations.iter() {
-        last_result = eval_declaration(declaration, &mut local_env)?;
+        last_result = eval_declaration(declaration, env)?;
     }
 
     return Ok(last_result);
@@ -53,6 +58,29 @@ pub fn evaluate_if_block(if_block: &IfBlock, env: &Environment) -> InterpreterRe
     }
 
     Ok(last_result)
+}
+
+pub fn evaluate_while_statement(
+    while_loop: &WhileLoop,
+    env: &mut Environment,
+) -> InterpreterResult<FL_T> {
+    let mut determinant;
+    let mut determinant_as_bool;
+    let mut last_result: InterpreterResult<FL_T> = Ok(FL_T::Unit);
+    let mut local_env = Environment::new(Some(&env));
+
+    loop {
+        determinant = evaluate_expr(&while_loop.condition, env)?;
+        determinant_as_bool = cast_to_bool(&determinant);
+
+        if determinant_as_bool {
+            last_result = evaluate_statement(&while_loop.body, env);
+        } else {
+            break; // while loop cond is no longer true
+        }
+    }
+
+    last_result
 }
 
 #[derive(Debug, Clone, PartialEq)]

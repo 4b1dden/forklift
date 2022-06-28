@@ -10,7 +10,7 @@ todo:
     - [x] else statements
     - [x] add Strings
     - [] logical operators
-    - [] add while loop
+    - [x] add while loop
     - [] add for loop 
     - [] add floats
     - [] add functions
@@ -21,10 +21,12 @@ todo:
     - [x] else statements
     - [x] strings
     - [] logical operators
-    - [] while loop
+    - [x] while loop
     - [] for loop 
     - [] floats
     - [] functions
+- [] better testing
+    - [] simple programs e2e
 - [] types? 
 - [] ... ?
 

@@ -131,10 +131,22 @@ pub struct LetBinding {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub struct Reassignment {
+    pub identifier: Identifier, // we only want Identifier type here, however, ..
+    pub rhs: Expr,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub struct IfBlock {
     pub cond: Expr,
     pub truthy_statement: Statement,
     pub else_statement: Option<Statement>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct WhileLoop {
+    pub condition: Expr,
+    pub body: Statement,
 }
 
 // TODO: unify this with other "statement" parser in grammar
@@ -170,6 +182,21 @@ pub fn parse_let_binding<'a>() -> impl Parser<'a, LetBinding> {
     })
 }
 
+pub fn parse_reassignment<'a>() -> impl Parser<'a, Reassignment> {
+    sequence_of_monomorphic(vec![
+        BoxedParser::new(trim_whitespace_around(parse_identifier_as_expr())),
+        BoxedParser::new(
+            trim_whitespace_around(parse_literal("=")).map(|_| Expr::Literal(LiteralExpr::Empty)),
+        ),
+        BoxedParser::new(parse_expr()),
+        BoxedParser::new(parse_literal(";").map(|_| Expr::Literal(LiteralExpr::Empty))),
+    ])
+    .map(|results| Reassignment {
+        identifier: ensure_is_identifier(results.get(0).unwrap().clone()),
+        rhs: results.get(2).unwrap().clone(),
+    })
+}
+
 pub fn parse_if_block_beginning<'a>() -> impl Parser<'a, Expr> {
     sequence_of_monomorphic(vec![
         BoxedParser::new(trim_whitespace_around(parse_literal("if")))
@@ -202,6 +229,26 @@ pub fn parse_if_block<'a>(input: &'a str) -> ParseResult<'a, IfBlock> {
         cond: conditional_expr,
         truthy_statement: statement,
         else_statement,
+    })
+    .parse(input)
+}
+
+pub fn parse_while_loop<'a>(input: &'a str) -> ParseResult<'a, WhileLoop> {
+    pair(
+        trim_whitespace_around(sequence_of_monomorphic(vec![
+            BoxedParser::new(trim_whitespace_around(parse_literal("while")))
+                .map(|_| Expr::Literal(LiteralExpr::Empty)),
+            BoxedParser::new(trim_whitespace_around(parse_literal("(")))
+                .map(|_| Expr::Literal(LiteralExpr::Empty)),
+            BoxedParser::new(trim_whitespace_around(parse_expr())),
+            BoxedParser::new(trim_whitespace_around(parse_literal(")")))
+                .map(|_| Expr::Literal(LiteralExpr::Empty)),
+        ])),
+        trim_whitespace_around(parse_statement()),
+    )
+    .map(|(conditional_expr, body)| WhileLoop {
+        condition: conditional_expr.get(2).unwrap().clone(),
+        body,
     })
     .parse(input)
 }

@@ -1,7 +1,7 @@
 use crate::parser::{
     parse_binary_expression, parse_identifier, parse_let_binding, parse_literal, parse_number,
-    parse_number_as_expr, BinaryExpr, BinaryOperator, Expr, Identifier, IfBlock, LetBinding,
-    LiteralExpr, Number, Parser, StringLiteral,
+    parse_number_as_expr, parse_while_loop, BinaryExpr, BinaryOperator, Expr, Identifier, IfBlock,
+    LetBinding, LiteralExpr, Number, Parser, StringLiteral, WhileLoop,
 };
 
 use super::{parse_grouping_expr, parse_if_block, parse_print_statement, parse_string_literal};
@@ -235,5 +235,21 @@ fn test_parse_string_literal() {
             ))))
         )),
         parser.parse(src)
+    );
+}
+
+#[test]
+fn test_parse_while_loop() {
+    assert_eq!(
+        Ok((
+            "",
+            WhileLoop {
+                condition: Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(1))),
+                body: Statement::Block(vec![Declaration::Statement(Statement::Print(
+                    Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(123)))
+                ))])
+            }
+        )),
+        parse_while_loop("while (1) { print 123; }")
     );
 }
