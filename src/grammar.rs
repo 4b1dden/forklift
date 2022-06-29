@@ -1,9 +1,9 @@
 use crate::parser::{
-    any_of_monomorphic, either, either_polymorphic, parse_binary_expression, parse_expr_literal,
-    parse_if_block, parse_let_binding, parse_literal, parse_print_statement, parse_reassignment,
-    parse_unary_expression, parse_while_loop, trim_whitespace_around, triplet, zero_or_more,
-    BoxedParser, Expr, Identifier, IfBlock, LetBinding, LiteralExpr, ParseResult, Parser,
-    Reassignment, WhileLoop,
+    any_of_monomorphic, either, either_polymorphic, end_with_semicolon, parse_binary_expression,
+    parse_expr_literal, parse_for_loop, parse_if_block, parse_let_binding, parse_literal,
+    parse_print_statement, parse_reassignment, parse_unary_expression, parse_while_loop,
+    trim_whitespace_around, triplet, zero_or_more, BoxedParser, Expr, ForLoop, Identifier, IfBlock,
+    LetBinding, LiteralExpr, ParseResult, Parser, Reassignment, WhileLoop,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -13,6 +13,7 @@ pub enum Statement {
     Block(Vec<Declaration>),
     If(Box<IfBlock>),
     WhileLoop(Box<WhileLoop>),
+    ForLoop(Box<ForLoop>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -39,6 +40,7 @@ pub fn parse_statement<'a>() -> impl Parser<'a, Statement> {
         ),
         BoxedParser::new(parse_while_loop)
             .map(|while_loop| Statement::WhileLoop(Box::new(while_loop))),
+        BoxedParser::new(parse_for_loop).map(|for_loop| Statement::ForLoop(Box::new(for_loop))),
         BoxedParser::new(parse_if_block).map(|if_block| Statement::If(Box::new(if_block))),
         BoxedParser::new(parse_print_statement().map(|expr| Statement::Print(expr))),
         BoxedParser::new(parse_expr_statement().map(|expr| Statement::Expr(expr))),
@@ -46,11 +48,12 @@ pub fn parse_statement<'a>() -> impl Parser<'a, Statement> {
 }
 
 pub fn decl_let_binding<'a>() -> BoxedParser<'a, Declaration> {
-    BoxedParser::new(parse_let_binding()).map(|let_binding| Declaration::Let(let_binding))
+    BoxedParser::new(end_with_semicolon(parse_let_binding()))
+        .map(|let_binding| Declaration::Let(let_binding))
 }
 
 pub fn decl_reassignment<'a>() -> BoxedParser<'a, Declaration> {
-    BoxedParser::new(parse_reassignment())
+    BoxedParser::new(end_with_semicolon(parse_reassignment()))
         .map(|reassignment| Declaration::Reassignment(reassignment))
 }
 
@@ -68,8 +71,20 @@ pub fn parse_declaration<'a>(input: &'a str) -> ParseResult<'a, Declaration> {
     .parse(input)
 }
 
-pub type Program = Vec<Declaration>;
+pub fn parse_declaration_without_trailing_semicolon<'a>(
+    input: &'a str,
+) -> ParseResult<'a, Declaration> {
+    trim_whitespace_around(any_of_monomorphic(vec![
+        BoxedParser::new(parse_let_binding()).map(|let_binding| Declaration::Let(let_binding)),
+        BoxedParser::new(parse_reassignment())
+            .map(|reassignment| Declaration::Reassignment(reassignment)),
+        decl_statement(),
+        // decl_scoped_block(),
+    ]))
+    .parse(input)
+}
 
+pub type Program = Vec<Declaration>;
 pub fn wrapped_scope<'a, P, R>(inside: P) -> impl Parser<'a, R>
 where
     P: Parser<'a, R> + 'a,

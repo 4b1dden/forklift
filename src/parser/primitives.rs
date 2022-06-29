@@ -1,4 +1,7 @@
-use crate::grammar::{parse_statement, wrapped_scope, Statement};
+use crate::grammar::{
+    parse_declaration, parse_declaration_without_trailing_semicolon, parse_statement,
+    wrapped_scope, Declaration, Statement,
+};
 use crate::parser::{
     and_then, at_least_one_whitespace, either, parse_binary_expression, parse_expr_literal,
     parse_unary_expression, sequence_of_monomorphic, trim_whitespace_around, BoxedParser, Expr,
@@ -149,6 +152,14 @@ pub struct WhileLoop {
     pub body: Statement,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct ForLoop {
+    pub init_declaration: Declaration,
+    pub condition: Expr,
+    pub post_iteration: Declaration,
+    pub body: Statement,
+}
+
 // TODO: unify this with other "statement" parser in grammar
 pub fn parse_expr<'a>() -> impl Parser<'a, Expr> {
     /*
@@ -174,7 +185,7 @@ pub fn parse_let_binding<'a>() -> impl Parser<'a, LetBinding> {
             trim_whitespace_around(parse_literal("=")).map(|_| Expr::Literal(LiteralExpr::Empty)),
         ),
         BoxedParser::new(parse_expr()),
-        BoxedParser::new(parse_literal(";").map(|_| Expr::Literal(LiteralExpr::Empty))),
+        // BoxedParser::new(parse_literal(";").map(|_| Expr::Literal(LiteralExpr::Empty))),
     ])
     .map(|results| LetBinding {
         identifier: ensure_is_identifier(results.get(2).unwrap().clone()),
@@ -189,12 +200,19 @@ pub fn parse_reassignment<'a>() -> impl Parser<'a, Reassignment> {
             trim_whitespace_around(parse_literal("=")).map(|_| Expr::Literal(LiteralExpr::Empty)),
         ),
         BoxedParser::new(parse_expr()),
-        BoxedParser::new(parse_literal(";").map(|_| Expr::Literal(LiteralExpr::Empty))),
     ])
     .map(|results| Reassignment {
         identifier: ensure_is_identifier(results.get(0).unwrap().clone()),
         rhs: results.get(2).unwrap().clone(),
     })
+}
+
+pub fn end_with_semicolon<'a, P, R>(parser: P) -> impl Parser<'a, R>
+where
+    P: Parser<'a, R> + 'a,
+    R: 'a,
+{
+    pair(parser, trim_whitespace_around(parse_literal(";"))).map(|(r1, _)| r1)
 }
 
 pub fn parse_if_block_beginning<'a>() -> impl Parser<'a, Expr> {
@@ -250,6 +268,52 @@ pub fn parse_while_loop<'a>(input: &'a str) -> ParseResult<'a, WhileLoop> {
         condition: conditional_expr.get(2).unwrap().clone(),
         body,
     })
+    .parse(input)
+}
+
+// "for" "(" ("declaration | "expr"?) ";" "expr" ";" "expr" ")" statement
+// TODO: this is pretty bad, i should rewrite it + rethink how expr / statements / decls are
+// handled lol
+pub fn parse_for_loop<'a>(input: &'a str) -> ParseResult<'a, ForLoop> {
+    let entry = pair(
+        BoxedParser::new(trim_whitespace_around(parse_literal("for")))
+            .map(|_| Expr::Literal(LiteralExpr::Empty)),
+        BoxedParser::new(trim_whitespace_around(parse_literal("(")))
+            .map(|_| Expr::Literal(LiteralExpr::Empty)),
+    );
+
+    // parse_declaration
+    let mid = pair(
+        BoxedParser::new(trim_whitespace_around(parse_expr())),
+        BoxedParser::new(trim_whitespace_around(parse_literal(";")))
+            .map(|_| Expr::Literal(LiteralExpr::Empty)),
+    );
+
+    let last = pair(
+        BoxedParser::new(trim_whitespace_around(
+            parse_declaration_without_trailing_semicolon,
+        )),
+        BoxedParser::new(trim_whitespace_around(parse_literal(")"))),
+    );
+
+    let for_loop_definition_body = triplet(
+        entry,
+        BoxedParser::new(trim_whitespace_around(parse_declaration)),
+        pair(mid, last),
+    );
+
+    pair(
+        for_loop_definition_body,
+        trim_whitespace_around(parse_statement()),
+    )
+    .map(
+        |((entry_pair, decl, (mid_pair, last_pair)), body)| ForLoop {
+            init_declaration: decl,
+            condition: mid_pair.0,
+            post_iteration: last_pair.0,
+            body,
+        },
+    )
     .parse(input)
 }
 

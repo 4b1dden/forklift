@@ -1,7 +1,9 @@
-use super::{evaluate_expr, FL_T_Primitive, FL_T};
+use super::{desugar_for_loop_to_while_block, evaluate_expr, FL_T_Primitive, FL_T};
+use crate::grammar::{Declaration, Statement};
 use crate::interpreter::Environment;
 use crate::parser::{
-    BinaryExpr, BinaryOperator, Expr, LiteralExpr, Number, StringLiteral, UnaryExpr, UnaryOperator,
+    BinaryExpr, BinaryOperator, Expr, ForLoop, Identifier, LetBinding, LiteralExpr, Number,
+    Reassignment, StringLiteral, UnaryExpr, UnaryOperator,
 };
 
 fn empty_env() -> Environment<'static> {
@@ -76,4 +78,43 @@ fn test_binary_expr() {
         evaluate_expr(&nested, &empty_env()),
         Ok(FL_T::Primitive(FL_T_Primitive::Integer32(53)))
     );
+}
+
+#[test]
+fn test_desugar_for_loop() {
+    // for (let k = 0; k < 10; k = k + 1) { print a; }
+    let for_loop = ForLoop {
+        init_declaration: Declaration::Let(LetBinding {
+            identifier: Identifier(String::from("k")),
+            rhs: Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(0))),
+        }),
+        condition: Expr::Binary(BinaryExpr {
+            lhs: Box::new(Expr::Literal(LiteralExpr::Identifier(Identifier(
+                String::from("k"),
+            )))),
+            op: BinaryOperator::Less,
+            rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                Number::Integer32(10),
+            ))),
+        }),
+        post_iteration: Declaration::Reassignment(Reassignment {
+            identifier: Identifier(String::from("k")),
+            rhs: Expr::Binary(BinaryExpr {
+                lhs: Box::new(Expr::Literal(LiteralExpr::Identifier(Identifier(
+                    String::from("k"),
+                )))),
+                op: BinaryOperator::Plus,
+                rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                    Number::Integer32(1),
+                ))),
+            }),
+        }),
+        body: Statement::Block(vec![Declaration::Statement(Statement::Print(
+            Expr::Literal(LiteralExpr::Identifier(Identifier(String::from("a")))),
+        ))]),
+    };
+
+    let desugared = desugar_for_loop_to_while_block(&for_loop);
+
+    println!("{:#?}", desugared);
 }

@@ -1,7 +1,8 @@
 use crate::parser::{
-    parse_binary_expression, parse_identifier, parse_let_binding, parse_literal, parse_number,
-    parse_number_as_expr, parse_while_loop, BinaryExpr, BinaryOperator, Expr, Identifier, IfBlock,
-    LetBinding, LiteralExpr, Number, Parser, StringLiteral, WhileLoop,
+    parse_binary_expression, parse_for_loop, parse_identifier, parse_let_binding, parse_literal,
+    parse_number, parse_number_as_expr, parse_while_loop, BinaryExpr, BinaryOperator, Expr,
+    ForLoop, Identifier, IfBlock, LetBinding, LiteralExpr, Number, Parser, Reassignment,
+    StringLiteral, WhileLoop,
 };
 
 use super::{parse_grouping_expr, parse_if_block, parse_print_statement, parse_string_literal};
@@ -63,7 +64,7 @@ fn test_parse_let_binding() {
     assert_eq!(
         parser.parse(src).unwrap(),
         (
-            "",
+            ";",
             LetBinding {
                 identifier: Identifier(String::from("foo")),
                 rhs: Expr::Binary(BinaryExpr {
@@ -251,5 +252,45 @@ fn test_parse_while_loop() {
             }
         )),
         parse_while_loop("while (1) { print 123; }")
+    );
+}
+
+#[test]
+fn test_parse_for_loop() {
+    assert_eq!(
+        Ok((
+            "",
+            ForLoop {
+                init_declaration: Declaration::Let(LetBinding {
+                    identifier: Identifier(String::from("k")),
+                    rhs: Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(0))),
+                }),
+                condition: Expr::Binary(BinaryExpr {
+                    lhs: Box::new(Expr::Literal(LiteralExpr::Identifier(Identifier(
+                        String::from("k")
+                    )))),
+                    op: BinaryOperator::Less,
+                    rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                        Number::Integer32(10)
+                    ))),
+                }),
+                post_iteration: Declaration::Reassignment(Reassignment {
+                    identifier: Identifier(String::from("k")),
+                    rhs: Expr::Binary(BinaryExpr {
+                        lhs: Box::new(Expr::Literal(LiteralExpr::Identifier(Identifier(
+                            String::from("k")
+                        )))),
+                        op: BinaryOperator::Plus,
+                        rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                            Number::Integer32(1)
+                        ))),
+                    })
+                }),
+                body: Statement::Block(vec![Declaration::Statement(Statement::Print(
+                    Expr::Literal(LiteralExpr::Identifier(Identifier(String::from("a"))))
+                ))])
+            }
+        )),
+        parse_for_loop("for (let k = 0; k < 10; k = k + 1) { print a; }")
     );
 }

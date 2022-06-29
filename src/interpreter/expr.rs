@@ -6,7 +6,7 @@ use std::ops::{Add, Div, Mul, Sub};
 use crate::grammar::{Declaration, Statement};
 use crate::interpreter::{eval_declaration, Environment};
 use crate::parser::{
-    BinaryExpr, BinaryOperator, Expr, IfBlock, LetBinding, LiteralExpr, Number, UnaryExpr,
+    BinaryExpr, BinaryOperator, Expr, ForLoop, IfBlock, LetBinding, LiteralExpr, Number, UnaryExpr,
     UnaryOperator, WhileLoop,
 };
 
@@ -81,6 +81,33 @@ pub fn evaluate_while_statement(
     }
 
     last_result
+}
+
+// for (expr1; expr2; expr3) block -->
+// {
+//      expr1;
+//      while (expr2) {
+//          ... block
+//          expr3
+//      }
+//  }
+pub fn desugar_for_loop_to_while_block(for_loop: &ForLoop) -> InterpreterResult<Statement> {
+    let mut decls = Vec::<Declaration>::new();
+
+    let while_loop_body = Statement::Block(vec![
+        Declaration::Statement(for_loop.body.clone()),
+        for_loop.post_iteration.clone(),
+    ]);
+
+    let inner_while = Statement::WhileLoop(Box::new(WhileLoop {
+        condition: for_loop.condition.clone(),
+        body: while_loop_body,
+    }));
+
+    decls.push(for_loop.init_declaration.clone());
+    decls.push(Declaration::Statement(inner_while));
+
+    Ok(Statement::Block(decls))
 }
 
 #[derive(Debug, Clone, PartialEq)]

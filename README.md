@@ -11,7 +11,9 @@ todo:
     - [x] add Strings
     - [] logical operators
     - [x] add while loop
+    - [] rethink how i handle expr / declaration / reassignment
     - [] add for loop 
+        - [] make fields in for loop optional
     - [] add floats
     - [] add functions
 - [] interpreter

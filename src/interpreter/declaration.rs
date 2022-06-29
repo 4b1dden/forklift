@@ -7,6 +7,8 @@ use crate::interpreter::{
 };
 use crate::parser::{LetBinding, Reassignment};
 
+use super::desugar_for_loop_to_while_block;
+
 // TODO: change, this is for early dev purposes only
 pub type InterpreterResult<T> = Result<T, String>;
 
@@ -25,6 +27,10 @@ pub fn evaluate_statement(statement: &Statement, env: &mut Environment) -> Inter
         Statement::Block(declarations) => evaluate_block(declarations, env),
         Statement::If(if_block) => evaluate_if_block(if_block, &env),
         Statement::WhileLoop(while_loop) => evaluate_while_statement(while_loop, env),
+        Statement::ForLoop(for_loop) => {
+            let desugared_block = desugar_for_loop_to_while_block(for_loop)?;
+            evaluate_statement(&desugared_block, env)
+        }
     }
 }
 
