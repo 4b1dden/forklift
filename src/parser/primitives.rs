@@ -4,8 +4,8 @@ use crate::grammar::{
 };
 use crate::parser::{
     and_then, at_least_one_whitespace, either, parse_binary_expression, parse_expr_literal,
-    parse_unary_expression, sequence_of_monomorphic, trim_whitespace_around, BoxedParser, Expr,
-    Identifier, Keywords, LiteralExpr, Number, Parser,
+    parse_unary_expression, sequence_of_monomorphic, trim_whitespace_around, zero_or_more,
+    BoxedParser, Expr, Identifier, Keywords, LiteralExpr, Number, Parser,
 };
 
 use super::{any_of_monomorphic, map, optional, pair, triplet, ParseResult, StringLiteral};
@@ -157,6 +157,13 @@ pub struct ForLoop {
     pub init_declaration: Declaration,
     pub condition: Expr,
     pub post_iteration: Declaration,
+    pub body: Statement,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FnDef {
+    pub identifier: Identifier,             // ?
+    pub arguments: Option<Vec<Identifier>>, // ?
     pub body: Statement,
 }
 
@@ -386,6 +393,57 @@ pub fn parse_string_literal<'a>() -> impl Parser<'a, Expr> {
             ))),
         ))
     }
+}
+
+/// from a caller's perspective it's okay to take Exprs
+/// from a definition perspective, it'd be ideal to take only Identifier, but we can live with this
+/// for now
+pub fn parse_arguments<'a>() -> impl Parser<'a, Vec<Expr>> {
+    pair(
+        parse_expr(),
+        optional(zero_or_more(
+            pair(trim_whitespace_around(parse_literal(",")), parse_expr()).map(|(_, expr)| expr),
+        )),
+    )
+    .map(|(first, maybe_rest)| {
+        let mut v = Vec::new();
+        v.push(first);
+
+        if let Some(mut rest) = maybe_rest {
+            v.append(&mut rest);
+        }
+
+        v
+    })
+}
+// Expr needs to evaluate into something callable
+pub fn parse_function_definition<'a>(input: &'a str) -> ParseResult<'a, FnDef> {
+    let arguments_parser = optional(parse_arguments());
+
+    triplet(
+        sequence_of_monomorphic(vec![
+            BoxedParser::new(trim_whitespace_around(parse_literal("fun"))),
+            BoxedParser::new(trim_whitespace_around(parse_identifier())),
+            BoxedParser::new(trim_whitespace_around(parse_literal("("))),
+        ])
+        .map(|sequence| Identifier(sequence.get(1).unwrap().to_string())),
+        pair(
+            BoxedParser::new(trim_whitespace_around(arguments_parser)),
+            BoxedParser::new(trim_whitespace_around(parse_literal(")"))),
+        ),
+        BoxedParser::new(trim_whitespace_around(parse_statement())), // fn def
+    )
+    .map(|(identifier, (maybe_arguments, _), body)| FnDef {
+        identifier,
+        arguments: maybe_arguments.map(|arguments| {
+            arguments
+                .iter()
+                .map(|expr| ensure_is_identifier(expr.clone()))
+                .collect()
+        }),
+        body,
+    })
+    .parse(input)
 }
 
 #[cfg(test)]

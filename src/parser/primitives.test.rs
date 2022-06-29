@@ -1,8 +1,8 @@
 use crate::parser::{
-    parse_binary_expression, parse_for_loop, parse_identifier, parse_let_binding, parse_literal,
-    parse_number, parse_number_as_expr, parse_while_loop, BinaryExpr, BinaryOperator, Expr,
-    ForLoop, Identifier, IfBlock, LetBinding, LiteralExpr, Number, Parser, Reassignment,
-    StringLiteral, WhileLoop,
+    parse_binary_expression, parse_for_loop, parse_function_definition, parse_identifier,
+    parse_let_binding, parse_literal, parse_number, parse_number_as_expr, parse_while_loop,
+    BinaryExpr, BinaryOperator, Expr, FnDef, ForLoop, Identifier, IfBlock, LetBinding, LiteralExpr,
+    Number, Parser, Reassignment, StringLiteral, WhileLoop,
 };
 
 use super::{parse_grouping_expr, parse_if_block, parse_print_statement, parse_string_literal};
@@ -293,4 +293,41 @@ fn test_parse_for_loop() {
         )),
         parse_for_loop("for (let k = 0; k < 10; k = k + 1) { print a; }")
     );
+}
+
+#[test]
+fn test_parse_fn_definition() {
+    let parser = parse_function_definition();
+
+    assert_eq!(
+        Ok((
+            "",
+            FnDef {
+                identifier: Identifier(String::from("foo")),
+                arguments: Some(vec![
+                    Identifier(String::from("a")),
+                    Identifier(String::from("b")),
+                ]),
+                body: Statement::Block(vec![Declaration::Statement(Statement::Print(
+                    Expr::Literal(LiteralExpr::Identifier(Identifier(String::from("a"))))
+                ))])
+            }
+        )),
+        parser.parse("fun foo(a, b) { print a; }")
+    );
+
+    assert_eq!(
+        Ok((
+            "",
+            FnDef {
+                identifier: Identifier(String::from("bar")),
+                arguments: None,
+                body: Statement::Block(vec![Declaration::Statement(Statement::Print(
+                    Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(12)))
+                ))])
+            }
+        )),
+        parser.parse("fun bar() { print 12; }")
+    );
+    //TODO: fix this lol println!("{:#?}", parser.parse("funfoo(a, b) { print a; }"));
 }

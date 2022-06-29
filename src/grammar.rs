@@ -1,9 +1,10 @@
 use crate::parser::{
     any_of_monomorphic, either, either_polymorphic, end_with_semicolon, parse_binary_expression,
-    parse_expr_literal, parse_for_loop, parse_if_block, parse_let_binding, parse_literal,
-    parse_print_statement, parse_reassignment, parse_unary_expression, parse_while_loop,
-    trim_whitespace_around, triplet, zero_or_more, BoxedParser, Expr, ForLoop, Identifier, IfBlock,
-    LetBinding, LiteralExpr, ParseResult, Parser, Reassignment, WhileLoop,
+    parse_expr_literal, parse_for_loop, parse_function_definition, parse_if_block,
+    parse_let_binding, parse_literal, parse_print_statement, parse_reassignment,
+    parse_unary_expression, parse_while_loop, trim_whitespace_around, triplet, zero_or_more,
+    BoxedParser, Expr, FnDef, ForLoop, Identifier, IfBlock, LetBinding, LiteralExpr, ParseResult,
+    Parser, Reassignment, WhileLoop,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -14,6 +15,7 @@ pub enum Statement {
     If(Box<IfBlock>),
     WhileLoop(Box<WhileLoop>),
     ForLoop(Box<ForLoop>),
+    FnDef(Box<FnDef>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -40,6 +42,8 @@ pub fn parse_statement<'a>() -> impl Parser<'a, Statement> {
         ),
         BoxedParser::new(parse_while_loop)
             .map(|while_loop| Statement::WhileLoop(Box::new(while_loop))),
+        BoxedParser::new(parse_function_definition)
+            .map(|fn_def| Statement::FnDef(Box::new(fn_def))),
         BoxedParser::new(parse_for_loop).map(|for_loop| Statement::ForLoop(Box::new(for_loop))),
         BoxedParser::new(parse_if_block).map(|if_block| Statement::If(Box::new(if_block))),
         BoxedParser::new(parse_print_statement().map(|expr| Statement::Print(expr))),

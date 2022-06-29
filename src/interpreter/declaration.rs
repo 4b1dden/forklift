@@ -31,6 +31,7 @@ pub fn evaluate_statement(statement: &Statement, env: &mut Environment) -> Inter
             let desugared_block = desugar_for_loop_to_while_block(for_loop)?;
             evaluate_statement(&desugared_block, env)
         }
+        Statement::FnDef(fn_def) => todo!(),
     }
 }
 
