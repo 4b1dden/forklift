@@ -12,7 +12,7 @@ todo:
     - [] logical operators
     - [x] add while loop
     - [] rethink how i handle expr / declaration / reassignment
-    - [] add for loop 
+    - [x] add for loop 
         - [] make fields in for loop optional
     - [] add floats
     - [] add functions
@@ -24,7 +24,8 @@ todo:
     - [x] strings
     - [] logical operators
     - [x] while loop
-    - [] for loop 
+    - [x] for loop 
+    - [] break statement in for loop
     - [] floats
     - [] functions
 - [] better testing
