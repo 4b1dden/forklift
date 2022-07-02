@@ -29,7 +29,7 @@ fn test_parse_declaration() {
 
 #[test]
 fn test_parse_statement() {
-    let parser = parse_statement();
+    let parser = parse_statement;
 
     assert_eq!(
         Ok((
@@ -42,7 +42,7 @@ fn test_parse_statement() {
                 else_statement: None
             }))
         )),
-        parser.parse(
+        parser(
             "if (1) {
         print 10;
     }"

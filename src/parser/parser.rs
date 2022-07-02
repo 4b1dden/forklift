@@ -1,11 +1,12 @@
 use std::fmt::Debug;
 
 use crate::parser::{
-    any_of_monomorphic, either, left, one_or_more, pair, parse_grouping_expr_2, parse_identifier,
-    parse_literal, parse_number, parse_string_literal, right, triplet, zero_or_more,
+    any_of_monomorphic, either, left, one_or_more, optional, pair, parse_expr,
+    parse_grouping_expr_2, parse_identifier, parse_literal, parse_number, parse_string_literal,
+    right, sequence_of_monomorphic, triplet, zero_or_more,
 };
 
-use super::{parse_identifier_as_expr, parse_number_as_expr};
+use super::{parse_arguments, parse_identifier_as_expr, parse_number_as_expr};
 
 pub type ParseResult<'a, T> = Result<(&'a str, T), String>;
 
@@ -100,25 +101,30 @@ pub enum Expr {
     Unary(UnaryExpr),
     Binary(BinaryExpr),
     Grouping(Box<Expr>),
+    FnCall(Box<FnCall>),
 }
 
-pub fn parse_expr_literal<'a>() -> impl Parser<'a, Expr> {
+pub fn parse_expr_literal<'a>(input: &'a str) -> ParseResult<'a, Expr> {
     any_of_monomorphic(vec![
         BoxedParser::new(parse_identifier_as_expr()),
         BoxedParser::new(parse_number_as_expr()),
         BoxedParser::new(parse_string_literal()),
     ])
+    .parse(input)
 }
 
-pub fn parse_single_statement<'a>() -> impl Parser<'a, Expr> {
+pub fn parse_single_statement<'a>(input: &'a str) -> ParseResult<'a, Expr> {
     // todo: impl fully
     // expr_literal | ... ?
     any_of_monomorphic(vec![
+        // BoxedParser::new(parse_binary_expression),
         BoxedParser::new(parse_grouping_expr_2),
         BoxedParser::new(parse_unary_expression),
-        BoxedParser::new(parse_expr_literal()),
+        //        BoxedParser::new(parse_function_call_for_expr.clone()),
+        BoxedParser::new(parse_expr_literal),
         BoxedParser::new(parse_string_literal()),
     ])
+    .parse(input)
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -160,6 +166,12 @@ pub struct BinaryExpr {
 pub struct UnaryExpr {
     pub op: UnaryOperator,
     pub expr: Box<Expr>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct FnCall {
+    pub callee: Expr,
+    pub arguments: Option<Vec<Expr>>,
 }
 
 pub fn and_then<'a, P, F, A, B, NextP>(parser: P, f: F) -> impl Parser<'a, B>
@@ -308,22 +320,26 @@ where
 }
 
 // Todo: add parentheses
-pub fn parse_binary_expression<'a>() -> impl Parser<'a, Expr> {
-    let lhs_number = trim_whitespace_around(parse_single_statement());
+pub fn parse_binary_expression<'a>(input: &'a str) -> ParseResult<'a, Expr> {
+    let lhs_number = trim_whitespace_around(parse_single_statement);
     let bin_op = trim_whitespace_around(bin_operand()).map(|op| BinaryOperator::from(op));
-    let rhs_number = trim_whitespace_around(parse_single_statement());
+    let rhs_number = trim_whitespace_around(parse_single_statement);
 
     let rhs_parser = pair(bin_op, rhs_number);
 
     return pair(lhs_number, one_or_more(rhs_parser))
         .map(|(base_expr, tuples)| flatten_bin_expr_to_infix(base_expr, tuples))
-        .map(|infix_exprs| fold_infix_binary_to_single_expr(infix_exprs));
+        .map(|infix_exprs| fold_infix_binary_to_single_expr(infix_exprs))
+        .parse(input);
 }
 
 pub fn parse_unary_expression<'a>(input: &'a str) -> ParseResult<'a, Expr> {
     let unary_op = optional_whitespace()
         .and_then(|_| unary_operand().map(|op_char| UnaryOperator::from(op_char)));
-    let expr_parser = parse_single_statement();
+    let expr_parser = any_of_monomorphic(vec![
+        // BoxedParser::new(parse_function_call),
+        BoxedParser::new(parse_single_statement),
+    ]);
 
     pair(unary_op, expr_parser)
         .map(|(unary_op, expr)| {
@@ -333,6 +349,36 @@ pub fn parse_unary_expression<'a>(input: &'a str) -> ParseResult<'a, Expr> {
             })
         })
         .parse(input)
+}
+
+pub fn parse_function_call<'a>(input: &'a str) -> ParseResult<'a, Expr> {
+    let arguments_parser = optional(parse_arguments);
+
+    triplet(
+        pair(
+            BoxedParser::new(parse_expr),
+            BoxedParser::new(parse_literal("(")).map(|_| Expr::Literal(LiteralExpr::Empty)),
+        ),
+        BoxedParser::new(arguments_parser),
+        BoxedParser::new(parse_literal(")")).map(|_| Expr::Literal(LiteralExpr::Empty)),
+    )
+    .map(|((callee, _), arguments, _)| Expr::FnCall(Box::new(FnCall { callee, arguments })))
+    .parse(input)
+}
+
+pub fn parse_function_call_for_expr<'a>(input: &'a str) -> ParseResult<'a, Expr> {
+    let arguments_parser = optional(parse_arguments);
+
+    triplet(
+        pair(
+            BoxedParser::new(parse_single_statement),
+            BoxedParser::new(parse_literal("(")).map(|_| Expr::Literal(LiteralExpr::Empty)),
+        ),
+        BoxedParser::new(arguments_parser),
+        BoxedParser::new(parse_literal(")")).map(|_| Expr::Literal(LiteralExpr::Empty)),
+    )
+    .map(|((callee, _), arguments, _)| Expr::FnCall(Box::new(FnCall { callee, arguments })))
+    .parse(input)
 }
 
 fn flatten_bin_expr_to_infix(

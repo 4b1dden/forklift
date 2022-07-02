@@ -1,8 +1,12 @@
-use crate::parser::{
-    any_of_monomorphic, at_least_one_whitespace, fold_infix_binary_to_single_expr, map,
-    parse_binary_expression, parse_expr_literal, parse_literal, parse_number,
-    parse_unary_expression, predicate, BinaryExpr, BinaryOperator, Expr, Identifier, LiteralExpr,
-    Number, Parser, StringLiteral, UnaryExpr, UnaryOperator,
+use crate::{
+    grammar::{decl_let_binding, Declaration, Statement},
+    parser::{
+        any_of_monomorphic, at_least_one_whitespace, fold_infix_binary_to_single_expr, map,
+        parse_binary_expression, parse_expr, parse_expr_literal, parse_function_call,
+        parse_let_binding, parse_literal, parse_number, parse_unary_expression, predicate,
+        BinaryExpr, BinaryOperator, Expr, FnCall, Identifier, LetBinding, LiteralExpr, Number,
+        Parser, StringLiteral, UnaryExpr, UnaryOperator,
+    },
 };
 
 fn mock_number_literal_expr(num: i32) -> Expr {
@@ -51,9 +55,9 @@ fn test_at_least_one_whitespace() {
 const BINARY_EXPR_DEFAULT: &str = "   3 * 100    + 4 * 2";
 #[test]
 fn test_parse_binary_expression() {
-    let parser = parse_binary_expression();
+    let parser = parse_binary_expression;
 
-    let result = parser.parse(BINARY_EXPR_DEFAULT).unwrap();
+    let result = parser(BINARY_EXPR_DEFAULT).unwrap();
 
     assert_eq!(
         (
@@ -101,17 +105,17 @@ fn test_any_of_monomorphic() {
 
 #[test]
 fn test_parse_expr_literal() {
-    let parser = parse_expr_literal();
+    let parser = parse_expr_literal;
 
     assert_eq!(
-        parser.parse("foo").unwrap(),
+        parser("foo").unwrap(),
         (
             "",
             Expr::Literal(LiteralExpr::Identifier(Identifier(String::from("foo"))))
         )
     );
     assert_eq!(
-        parser.parse("123").unwrap(),
+        parser("123").unwrap(),
         (
             "",
             Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(123)))
@@ -147,5 +151,45 @@ fn test_parse_unary_expr() {
                 )))),
             })
         ))
+    );
+}
+
+#[test]
+fn test_parse_function_call() {
+    // println!("{:#?}", parse_function_call("foo()"));
+    // println!("{:#?}", parse_function_call("foo(a, b)"));
+    // println!("{:#?}", parse_function_call("foo()(a, b)"));
+    // println!("{:#?}", parse_expr("foo()"));
+}
+
+#[test]
+fn test_parse_function_call_with_unary_precedence() {
+    let (_, result) = parse_unary_expression("-foo(a, b)").unwrap();
+
+    assert!(match result {
+        Expr::Unary(_) => true,
+        _ => false,
+    });
+}
+
+#[test]
+fn test_function_call_in_assignment() {
+    let parser = decl_let_binding;
+
+    assert_eq!(
+        Ok((
+            "",
+            Declaration::Let(LetBinding {
+                identifier: Identifier(String::from("a")),
+                rhs: Expr::FnCall(Box::new(FnCall {
+                    callee: Expr::Literal(LiteralExpr::Identifier(Identifier(String::from("foo")))),
+                    arguments: Some(vec![
+                        Expr::Literal(LiteralExpr::Identifier(Identifier(String::from("a")))),
+                        Expr::Literal(LiteralExpr::Identifier(Identifier(String::from("b")))),
+                    ])
+                }))
+            })
+        )),
+        parser.parse("let a = foo(a, b);")
     );
 }

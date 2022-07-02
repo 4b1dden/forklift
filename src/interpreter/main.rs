@@ -30,10 +30,11 @@ impl<'a> Environment<'a> {
         }
     }
 
-    pub fn put(&mut self, key: String, val: FL_T) -> InterpreterResult<FL_T> {
-        self.bindings
-            .insert(key, val)
-            .ok_or(String::from("Could not insert into local bindings"))
+    /// TODO: should this ever fail? maybe when we have consts
+    pub fn put(&mut self, key: String, val: FL_T) -> InterpreterResult<()> {
+        self.bindings.insert(key, val);
+
+        Ok(())
     }
 }
 

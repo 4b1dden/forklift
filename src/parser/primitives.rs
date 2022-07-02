@@ -4,11 +4,14 @@ use crate::grammar::{
 };
 use crate::parser::{
     and_then, at_least_one_whitespace, either, parse_binary_expression, parse_expr_literal,
-    parse_unary_expression, sequence_of_monomorphic, trim_whitespace_around, zero_or_more,
-    BoxedParser, Expr, Identifier, Keywords, LiteralExpr, Number, Parser,
+    parse_function_call, parse_unary_expression, sequence_of_monomorphic, trim_whitespace_around,
+    zero_or_more, BoxedParser, Expr, Identifier, Keywords, LiteralExpr, Number, Parser,
 };
 
-use super::{any_of_monomorphic, map, optional, pair, triplet, ParseResult, StringLiteral};
+use super::{
+    any_of_monomorphic, map, optional, pair, parse_function_call_for_expr, triplet, ParseResult,
+    StringLiteral,
+};
 
 pub fn parse_number<'a>() -> impl Parser<'a, &'a str> {
     move |input: &'a str| {
@@ -168,19 +171,15 @@ pub struct FnDef {
 }
 
 // TODO: unify this with other "statement" parser in grammar
-pub fn parse_expr<'a>() -> impl Parser<'a, Expr> {
-    /*
-    either(
-        either(parse_unary_expression(), parse_binary_expression()),
-        parse_expr_literal(),
-    )
-    */
+pub fn parse_expr<'a>(input: &'a str) -> ParseResult<'a, Expr> {
     any_of_monomorphic(vec![
-        BoxedParser::new(parse_binary_expression()),
+        BoxedParser::new(parse_binary_expression),
         BoxedParser::new(parse_unary_expression),
-        BoxedParser::new(parse_expr_literal()),
+        BoxedParser::new(parse_function_call_for_expr),
+        BoxedParser::new(parse_expr_literal),
         BoxedParser::new(parse_grouping_expr_2), // no clue how this works and i am very tired
     ])
+    .parse(input)
 }
 
 pub fn parse_let_binding<'a>() -> impl Parser<'a, LetBinding> {
@@ -191,7 +190,7 @@ pub fn parse_let_binding<'a>() -> impl Parser<'a, LetBinding> {
         BoxedParser::new(
             trim_whitespace_around(parse_literal("=")).map(|_| Expr::Literal(LiteralExpr::Empty)),
         ),
-        BoxedParser::new(parse_expr()),
+        BoxedParser::new(parse_expr),
         // BoxedParser::new(parse_literal(";").map(|_| Expr::Literal(LiteralExpr::Empty))),
     ])
     .map(|results| LetBinding {
@@ -206,7 +205,7 @@ pub fn parse_reassignment<'a>() -> impl Parser<'a, Reassignment> {
         BoxedParser::new(
             trim_whitespace_around(parse_literal("=")).map(|_| Expr::Literal(LiteralExpr::Empty)),
         ),
-        BoxedParser::new(parse_expr()),
+        BoxedParser::new(parse_expr),
     ])
     .map(|results| Reassignment {
         identifier: ensure_is_identifier(results.get(0).unwrap().clone()),
@@ -228,7 +227,7 @@ pub fn parse_if_block_beginning<'a>() -> impl Parser<'a, Expr> {
             .map(|_| Expr::Literal(LiteralExpr::Empty)),
         BoxedParser::new(trim_whitespace_around(parse_literal("(")))
             .map(|_| Expr::Literal(LiteralExpr::Empty)),
-        BoxedParser::new(trim_whitespace_around(parse_expr())),
+        BoxedParser::new(trim_whitespace_around(parse_expr)),
         BoxedParser::new(trim_whitespace_around(parse_literal(")")))
             .map(|_| Expr::Literal(LiteralExpr::Empty)),
     ])
@@ -239,7 +238,7 @@ pub fn parse_else_clause<'a>() -> impl Parser<'a, Statement> {
     pair(
         BoxedParser::new(trim_whitespace_around(parse_literal("else")))
             .map(|_| Expr::Literal(LiteralExpr::Empty)),
-        BoxedParser::new(parse_statement()),
+        BoxedParser::new(parse_statement),
     )
     .map(|(_, statement)| statement)
 }
@@ -247,7 +246,7 @@ pub fn parse_else_clause<'a>() -> impl Parser<'a, Statement> {
 pub fn parse_if_block<'a>(input: &'a str) -> ParseResult<'a, IfBlock> {
     triplet(
         BoxedParser::new(parse_if_block_beginning()),
-        BoxedParser::new(trim_whitespace_around(parse_statement())),
+        BoxedParser::new(trim_whitespace_around(parse_statement)),
         BoxedParser::new(optional(trim_whitespace_around(parse_else_clause()))),
     )
     .map(|(conditional_expr, statement, else_statement)| IfBlock {
@@ -265,11 +264,11 @@ pub fn parse_while_loop<'a>(input: &'a str) -> ParseResult<'a, WhileLoop> {
                 .map(|_| Expr::Literal(LiteralExpr::Empty)),
             BoxedParser::new(trim_whitespace_around(parse_literal("(")))
                 .map(|_| Expr::Literal(LiteralExpr::Empty)),
-            BoxedParser::new(trim_whitespace_around(parse_expr())),
+            BoxedParser::new(trim_whitespace_around(parse_expr)),
             BoxedParser::new(trim_whitespace_around(parse_literal(")")))
                 .map(|_| Expr::Literal(LiteralExpr::Empty)),
         ])),
-        trim_whitespace_around(parse_statement()),
+        trim_whitespace_around(parse_statement),
     )
     .map(|(conditional_expr, body)| WhileLoop {
         condition: conditional_expr.get(2).unwrap().clone(),
@@ -291,7 +290,7 @@ pub fn parse_for_loop<'a>(input: &'a str) -> ParseResult<'a, ForLoop> {
 
     // parse_declaration
     let mid = pair(
-        BoxedParser::new(trim_whitespace_around(parse_expr())),
+        BoxedParser::new(trim_whitespace_around(parse_expr)),
         BoxedParser::new(trim_whitespace_around(parse_literal(";")))
             .map(|_| Expr::Literal(LiteralExpr::Empty)),
     );
@@ -311,7 +310,7 @@ pub fn parse_for_loop<'a>(input: &'a str) -> ParseResult<'a, ForLoop> {
 
     pair(
         for_loop_definition_body,
-        trim_whitespace_around(parse_statement()),
+        trim_whitespace_around(parse_statement),
     )
     .map(
         |((entry_pair, decl, (mid_pair, last_pair)), body)| ForLoop {
@@ -331,20 +330,21 @@ pub fn ensure_is_identifier(e: Expr) -> Identifier {
     }
 }
 
-pub fn parse_print_statement<'a>() -> impl Parser<'a, Expr> {
+pub fn parse_print_statement<'a>(input: &'a str) -> ParseResult<'a, Expr> {
     sequence_of_monomorphic(vec![
         BoxedParser::new(parse_print_keyword()),
         BoxedParser::new(at_least_one_whitespace().map(|_| Expr::Literal(LiteralExpr::Empty))),
-        BoxedParser::new(parse_expr()),
+        BoxedParser::new(parse_expr),
         BoxedParser::new(parse_literal(";").map(|_| Expr::Literal(LiteralExpr::Empty))),
     ])
     .map(|results| results.get(2).unwrap().clone())
+    .parse(input)
 }
 
 pub fn parse_grouping_expr<'a>() -> impl Parser<'a, Expr> {
     triplet(
         trim_whitespace_around(parse_literal("(")),
-        parse_expr(),
+        parse_expr,
         trim_whitespace_around(parse_literal(")")),
     )
     .map(|(_, expr, _)| Expr::Grouping(Box::new(expr)))
@@ -355,7 +355,7 @@ pub fn parse_grouping_expr<'a>() -> impl Parser<'a, Expr> {
 pub fn parse_grouping_expr_2<'a>(input: &'a str) -> ParseResult<'a, Expr> {
     let (rest, res) = triplet(
         trim_whitespace_around(parse_literal("(")),
-        parse_expr(),
+        parse_expr,
         trim_whitespace_around(parse_literal(")")),
     )
     .parse(input)?;
@@ -398,11 +398,11 @@ pub fn parse_string_literal<'a>() -> impl Parser<'a, Expr> {
 /// from a caller's perspective it's okay to take Exprs
 /// from a definition perspective, it'd be ideal to take only Identifier, but we can live with this
 /// for now
-pub fn parse_arguments<'a>() -> impl Parser<'a, Vec<Expr>> {
+pub fn parse_arguments<'a>(input: &'a str) -> ParseResult<'a, Vec<Expr>> {
     pair(
-        parse_expr(),
+        parse_expr,
         optional(zero_or_more(
-            pair(trim_whitespace_around(parse_literal(",")), parse_expr()).map(|(_, expr)| expr),
+            pair(trim_whitespace_around(parse_literal(",")), parse_expr).map(|(_, expr)| expr),
         )),
     )
     .map(|(first, maybe_rest)| {
@@ -415,10 +415,11 @@ pub fn parse_arguments<'a>() -> impl Parser<'a, Vec<Expr>> {
 
         v
     })
+    .parse(input)
 }
 // Expr needs to evaluate into something callable
 pub fn parse_function_definition<'a>(input: &'a str) -> ParseResult<'a, FnDef> {
-    let arguments_parser = optional(parse_arguments());
+    let arguments_parser = optional(parse_arguments);
 
     triplet(
         sequence_of_monomorphic(vec![
@@ -431,7 +432,7 @@ pub fn parse_function_definition<'a>(input: &'a str) -> ParseResult<'a, FnDef> {
             BoxedParser::new(trim_whitespace_around(arguments_parser)),
             BoxedParser::new(trim_whitespace_around(parse_literal(")"))),
         ),
-        BoxedParser::new(trim_whitespace_around(parse_statement())), // fn def
+        BoxedParser::new(trim_whitespace_around(parse_statement)), // fn def
     )
     .map(|(identifier, (maybe_arguments, _), body)| FnDef {
         identifier,

@@ -6,8 +6,8 @@ use std::ops::{Add, Div, Mul, Sub};
 use crate::grammar::{Declaration, Statement};
 use crate::interpreter::{eval_declaration, Environment};
 use crate::parser::{
-    BinaryExpr, BinaryOperator, Expr, ForLoop, IfBlock, LetBinding, LiteralExpr, Number, UnaryExpr,
-    UnaryOperator, WhileLoop,
+    BinaryExpr, BinaryOperator, Expr, FnDef, ForLoop, Identifier, IfBlock, LetBinding, LiteralExpr,
+    Number, UnaryExpr, UnaryOperator, WhileLoop,
 };
 
 use super::{evaluate_statement, InterpreterResult};
@@ -18,6 +18,7 @@ pub fn evaluate_expr(expr: &Expr, env: &Environment) -> InterpreterResult<FL_T> 
         Expr::Unary(unary_expr) => evaluate_unary_expr(unary_expr, env),
         Expr::Binary(binary_expr) => evaluate_binary_expr(binary_expr, env),
         Expr::Grouping(grouping_body) => evaluate_grouping_expr(grouping_body, env),
+        Expr::FnCall(fn_call) => todo!("fn call"),
     }
 }
 
@@ -83,14 +84,31 @@ pub fn evaluate_while_statement(
     last_result
 }
 
-// for (expr1; expr2; expr3) block -->
-// {
-//      expr1;
-//      while (expr2) {
-//          ... block
-//          expr3
-//      }
-//  }
+pub fn evaluate_fn_def(fn_def: &FnDef, env: &mut Environment) -> InterpreterResult<FL_T> {
+    check_fn_def(fn_def)?;
+    let fl_t_callable: FL_T_Callable = fn_def.into();
+
+    let res = env.put(fn_def.identifier.0.clone(), FL_T::Callable(fl_t_callable));
+
+    println!(" ola {:#?}", res);
+    Ok(FL_T::Unit)
+}
+
+fn check_fn_def(fn_def: &FnDef) -> InterpreterResult<()> {
+    const MAX_ARG_LEN: usize = 255;
+
+    if let Some(arguments) = &fn_def.arguments {
+        if arguments.len() > MAX_ARG_LEN {
+            return Err(format!(
+                "Maximum arg len exceeded. You have {}, max allowed is {}",
+                arguments.len(),
+                MAX_ARG_LEN
+            ));
+        }
+    }
+
+    Ok(())
+}
 pub fn desugar_for_loop_to_while_block(for_loop: &ForLoop) -> InterpreterResult<Statement> {
     let mut decls = Vec::<Declaration>::new();
 
@@ -113,6 +131,7 @@ pub fn desugar_for_loop_to_while_block(for_loop: &ForLoop) -> InterpreterResult<
 #[derive(Debug, Clone, PartialEq)]
 pub enum FL_T {
     Primitive(FL_T_Primitive),
+    Callable(FL_T_Callable),
     Unit,
 }
 
@@ -131,6 +150,18 @@ impl Display for FL_T {
             FL_T::Primitive(FL_T_Primitive::Float64(float64)) => {
                 write!(f, "{}", float64)
             }
+            FL_T::Callable(fl_t_callable) => {
+                let ident = fl_t_callable.identifier.0.clone();
+                write!(
+                    f,
+                    "FL_T_Callable: {:?}({:?})",
+                    ident,
+                    fl_t_callable
+                        .arguments
+                        .as_ref()
+                        .map(|args| args.iter().fold(String::new(), |acc, curr| acc + &curr.0))
+                )
+            }
             FL_T::Unit => {
                 write!(f, "()")
             }
@@ -145,6 +176,25 @@ pub enum FL_T_Primitive {
     Integer32(i32),
     Float64(f64),
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct FL_T_Callable {
+    pub identifier: Identifier,
+    pub arguments: Option<Vec<Identifier>>, // ?
+    pub body: Statement,
+}
+
+impl From<&FnDef> for FL_T_Callable {
+    fn from(incoming: &FnDef) -> Self {
+        Self {
+            identifier: incoming.identifier.clone(),
+            arguments: incoming.arguments.clone(),
+            body: incoming.body.clone(),
+        }
+    }
+}
+
+pub trait Arity {}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FL_T_Bool {
@@ -292,6 +342,7 @@ pub fn cast_to_bool(x: &FL_T) -> bool {
         FL_T::Primitive(FL_T_Primitive::Str(string)) => string != "",
         FL_T::Primitive(FL_T_Primitive::Bool(flag)) => *flag,
         FL_T::Primitive(FL_T_Primitive::Float64(float64)) => *float64 > 0_f64,
+        FL_T::Callable(_) => todo!(),
         FL_T::Unit => false,
     }
 }

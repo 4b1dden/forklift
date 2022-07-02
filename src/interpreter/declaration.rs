@@ -2,7 +2,7 @@ use std::borrow::BorrowMut;
 
 use crate::grammar::{Declaration, Statement};
 use crate::interpreter::{
-    evaluate_block, evaluate_expr, evaluate_if_block, evaluate_print_statement,
+    evaluate_block, evaluate_expr, evaluate_fn_def, evaluate_if_block, evaluate_print_statement,
     evaluate_while_statement, Environment, FL_T,
 };
 use crate::parser::{LetBinding, Reassignment};
@@ -31,7 +31,7 @@ pub fn evaluate_statement(statement: &Statement, env: &mut Environment) -> Inter
             let desugared_block = desugar_for_loop_to_while_block(for_loop)?;
             evaluate_statement(&desugared_block, env)
         }
-        Statement::FnDef(fn_def) => todo!(),
+        Statement::FnDef(fn_def) => evaluate_fn_def(fn_def, env),
     }
 }
 
@@ -49,6 +49,7 @@ pub fn evaluate_let_binding(
 /// TODO: We need to either get a mutable reference to the enclosing environment
 /// or "capture" enclosed variables inside of the local environment, then mutate them locally and
 /// also check the while loop condition locally
+/// I am 95% sure this implementation will bite me in the ass in the future
 pub fn evaluate_reassignment(
     reassignment: &Reassignment,
     env: &mut Environment,

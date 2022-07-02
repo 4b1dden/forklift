@@ -123,7 +123,7 @@ fn test_parse_grouping_expr() {
 
 #[test]
 fn test_parse_binary_with_grouping() {
-    let parser = parse_binary_expression();
+    let parser = parse_binary_expression;
 
     assert_eq!(
         Ok((
@@ -144,13 +144,13 @@ fn test_parse_binary_with_grouping() {
                 )))
             })
         )),
-        parser.parse("(1+2)*3")
+        parser("(1+2)*3")
     );
 }
 
 #[test]
 fn test_parse_print_statement() {
-    let parser = parse_print_statement();
+    let parser = parse_print_statement;
 
     assert_eq!(
         Ok((
@@ -165,7 +165,7 @@ fn test_parse_print_statement() {
                 ))),
             })
         )),
-        parser.parse("print 1+2;")
+        parser("print 1+2;")
     );
 }
 
@@ -297,7 +297,7 @@ fn test_parse_for_loop() {
 
 #[test]
 fn test_parse_fn_definition() {
-    let parser = parse_function_definition();
+    let parser = parse_function_definition;
 
     assert_eq!(
         Ok((
