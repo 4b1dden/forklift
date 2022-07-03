@@ -1,11 +1,12 @@
 use std::collections::HashMap;
 
+use crate::parser::Identifier;
 use crate::{
     grammar::{Declaration, Program},
-    interpreter::{InterpreterResult, FL_T},
+    interpreter::{FL_T_Callable, InterpreterResult, FL_T},
 };
 
-use super::eval_declaration;
+use super::{eval_declaration, Callable_Native, FL_T_Callable_Body};
 
 #[derive(Debug, Clone)]
 pub struct Environment<'a> {
@@ -50,6 +51,33 @@ impl<'a> Interpreter<'a> {
             source,
             global_env: Environment::new(None),
         }
+    }
+
+    pub fn load_defaults(&mut self) -> InterpreterResult<()> {
+        let mut defaults = HashMap::new();
+
+        defaults.insert(
+            String::from("clock"),
+            FL_T::Callable(FL_T_Callable {
+                identifier: Identifier(String::from("clock")),
+                arguments: None,
+                body: FL_T_Callable_Body::Native(Callable_Native::Clock),
+            }),
+        );
+
+        self.preload_with(defaults)
+    }
+
+    pub fn preload_with(&mut self, m: HashMap<String, FL_T>) -> InterpreterResult<()> {
+        for (key, val) in m {
+            self.inject_into_global_env(key, val)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn inject_into_global_env(&mut self, key: String, val: FL_T) -> InterpreterResult<()> {
+        self.global_env.put(key, val)
     }
 
     pub fn interpret_program(&mut self) {

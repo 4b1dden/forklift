@@ -2,12 +2,13 @@ use std::borrow::BorrowMut;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::ops::{Add, Div, Mul, Sub};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::grammar::{Declaration, Statement};
 use crate::interpreter::{eval_declaration, Environment};
 use crate::parser::{
-    BinaryExpr, BinaryOperator, Expr, FnDef, ForLoop, Identifier, IfBlock, LetBinding, LiteralExpr,
-    Number, UnaryExpr, UnaryOperator, WhileLoop,
+    BinaryExpr, BinaryOperator, Expr, FnCall, FnDef, ForLoop, Identifier, IfBlock, LetBinding,
+    LiteralExpr, Number, UnaryExpr, UnaryOperator, WhileLoop,
 };
 
 use super::{evaluate_statement, InterpreterResult};
@@ -18,7 +19,7 @@ pub fn evaluate_expr(expr: &Expr, env: &Environment) -> InterpreterResult<FL_T> 
         Expr::Unary(unary_expr) => evaluate_unary_expr(unary_expr, env),
         Expr::Binary(binary_expr) => evaluate_binary_expr(binary_expr, env),
         Expr::Grouping(grouping_body) => evaluate_grouping_expr(grouping_body, env),
-        Expr::FnCall(fn_call) => todo!("fn call"),
+        Expr::FnCall(fn_call) => evaluate_fn_call(fn_call, env),
     }
 }
 
@@ -86,11 +87,11 @@ pub fn evaluate_while_statement(
 
 pub fn evaluate_fn_def(fn_def: &FnDef, env: &mut Environment) -> InterpreterResult<FL_T> {
     check_fn_def(fn_def)?;
+
     let fl_t_callable: FL_T_Callable = fn_def.into();
 
     let res = env.put(fn_def.identifier.0.clone(), FL_T::Callable(fl_t_callable));
 
-    println!(" ola {:#?}", res);
     Ok(FL_T::Unit)
 }
 
@@ -150,6 +151,9 @@ impl Display for FL_T {
             FL_T::Primitive(FL_T_Primitive::Float64(float64)) => {
                 write!(f, "{}", float64)
             }
+            FL_T::Primitive(FL_T_Primitive::UInteger128(uint128)) => {
+                write!(f, "{}", uint128)
+            }
             FL_T::Callable(fl_t_callable) => {
                 let ident = fl_t_callable.identifier.0.clone();
                 write!(
@@ -175,13 +179,25 @@ pub enum FL_T_Primitive {
     Bool(bool),
     Integer32(i32),
     Float64(f64),
+    UInteger128(u128),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct FL_T_Callable {
     pub identifier: Identifier,
     pub arguments: Option<Vec<Identifier>>, // ?
-    pub body: Statement,
+    pub body: FL_T_Callable_Body,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum FL_T_Callable_Body {
+    Native(Callable_Native), // Rust
+    FL_T(Statement),         // FL_T
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Callable_Native {
+    Clock,
 }
 
 impl From<&FnDef> for FL_T_Callable {
@@ -189,7 +205,7 @@ impl From<&FnDef> for FL_T_Callable {
         Self {
             identifier: incoming.identifier.clone(),
             arguments: incoming.arguments.clone(),
-            body: incoming.body.clone(),
+            body: FL_T_Callable_Body::FL_T(incoming.body.clone()),
         }
     }
 }
@@ -257,6 +273,10 @@ fn apply_bin_op_to_bin_expr(
             FL_T::Primitive(FL_T_Primitive::Float64(l_f64)),
             FL_T::Primitive(FL_T_Primitive::Float64(r_f64)),
         ) => Ok(compute_bin_op_f64(l_f64, op, r_f64)),
+        (
+            FL_T::Primitive(FL_T_Primitive::UInteger128(l_u128)),
+            FL_T::Primitive(FL_T_Primitive::UInteger128(r_u128)),
+        ) => Ok(compute_bin_op_u128(l_u128, op, r_u128)),
         _ => todo!("apply_bin_op_to_bin_expr"),
     }
 }
@@ -294,6 +314,21 @@ fn compute_bin_op_f64(l: f64, op: &BinaryOperator, r: f64) -> FL_T {
     }
 }
 
+fn compute_bin_op_u128(l: u128, op: &BinaryOperator, r: u128) -> FL_T {
+    match op {
+        BinaryOperator::Minus => FL_T::Primitive(FL_T_Primitive::UInteger128(l - r)),
+        BinaryOperator::Plus => FL_T::Primitive(FL_T_Primitive::UInteger128(l + r)),
+        BinaryOperator::Mul => FL_T::Primitive(FL_T_Primitive::UInteger128(l * r)),
+        BinaryOperator::Div => FL_T::Primitive(FL_T_Primitive::UInteger128(l / r)),
+
+        BinaryOperator::Greater => downcast_bin_comparison_to_fl_t_i32(|| l > r),
+        BinaryOperator::GreaterEq => downcast_bin_comparison_to_fl_t_i32(|| l >= r),
+        BinaryOperator::Less => downcast_bin_comparison_to_fl_t_i32(|| l < r),
+        BinaryOperator::LessEq => downcast_bin_comparison_to_fl_t_i32(|| l <= r),
+        BinaryOperator::BangEq => downcast_bin_comparison_to_fl_t_i32(|| l != r),
+        BinaryOperator::EqEq => downcast_bin_comparison_to_fl_t_i32(|| l == r),
+    }
+}
 fn downcast_bin_comparison_to_fl_t_i32<F>(f: F) -> FL_T
 where
     F: Fn() -> bool,
@@ -334,6 +369,77 @@ pub fn evaluate_grouping_expr(expr: &Box<Expr>, env: &Environment) -> Interprete
     evaluate_expr(&expr, env)
 }
 
+pub fn evaluate_fn_call(fn_call: &FnCall, env: &Environment) -> InterpreterResult<FL_T> {
+    let callee_eval = evaluate_expr(&fn_call.callee, env)?;
+
+    match callee_eval {
+        FL_T::Callable(callable_def) => {
+            // check if arg len match
+            let callable_def_args = &callable_def.arguments;
+            let arg_match = match (&callable_def.arguments, &fn_call.arguments) {
+                (None, None) => true,
+                (Some(callable_def_args), Some(fn_call_args)) => {
+                    callable_def_args.len() == fn_call_args.len()
+                }
+                _ => false,
+            };
+
+            if !arg_match {
+                return Err(format!(
+                    "Arguments count mismatch for {:?} call",
+                    fn_call.callee.clone()
+                ));
+            }
+
+            // fill env for function local scope
+            let mut local_fn_call_scope = Environment::new(Some(&env));
+
+            if let Some(fn_call_args) = &fn_call.arguments {
+                for (idx, fn_call_arg) in fn_call_args.iter().enumerate() {
+                    let fn_def_corresponding_arg_name =
+                        callable_def_args.as_ref().unwrap().get(idx).unwrap();
+
+                    let evaluated_fn_call_arg = evaluate_expr(fn_call_arg, env)?;
+
+                    // fill new local scope with evaluated values
+                    local_fn_call_scope.put(
+                        fn_def_corresponding_arg_name.0.clone(),
+                        evaluated_fn_call_arg,
+                    )?;
+                }
+            }
+
+            // evaluate function body with new function scope env
+            match callable_def.body {
+                FL_T_Callable_Body::FL_T(body_statement) => {
+                    evaluate_statement(&body_statement, &mut local_fn_call_scope)
+                }
+                FL_T_Callable_Body::Native(native_fn_variant) => {
+                    evaluate_native_fn_variant(native_fn_variant, &mut local_fn_call_scope)
+                }
+            }
+        }
+        _ => Err(format!("{:?} is not callable", callee_eval)),
+    }
+}
+
+pub fn evaluate_native_fn_variant(
+    native_fn_variant: Callable_Native,
+    env: &mut Environment,
+) -> InterpreterResult<FL_T> {
+    match native_fn_variant {
+        Callable_Native::Clock => {
+            let start = SystemTime::now();
+            let since_the_epoch = start
+                .duration_since(UNIX_EPOCH)
+                .expect("Time went backwards");
+            Ok(FL_T::Primitive(FL_T_Primitive::UInteger128(
+                since_the_epoch.as_millis(),
+            )))
+        }
+    }
+}
+
 // TODO: Remove this once we have type checks? I'd want my language to be strict and now allow
 // stuff like if ("foo") like wtf is a "truthy" value they have played us for absolute fools
 pub fn cast_to_bool(x: &FL_T) -> bool {
@@ -342,6 +448,7 @@ pub fn cast_to_bool(x: &FL_T) -> bool {
         FL_T::Primitive(FL_T_Primitive::Str(string)) => string != "",
         FL_T::Primitive(FL_T_Primitive::Bool(flag)) => *flag,
         FL_T::Primitive(FL_T_Primitive::Float64(float64)) => *float64 > 0_f64,
+        FL_T::Primitive(FL_T_Primitive::UInteger128(uint128)) => *uint128 > 0_u128,
         FL_T::Callable(_) => todo!(),
         FL_T::Unit => false,
     }

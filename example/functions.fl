@@ -1,9 +1,6 @@
 fun print_name(name) {
     print name;
     let a = 1+2;
-    fun foo() {
-        print bar;
-    }
 }
 print print_name;
 

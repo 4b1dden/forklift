@@ -41,6 +41,7 @@ fn load_and_eval_file(path: &Path) {
 
     let dec_count = parsed_program.len();
     let mut interpreter = Interpreter::new(parsed_program);
+    let res = interpreter.load_defaults();
 
     println!("[FL]: ------ PROGRAM EVALUATION START");
     let executed_prog = interpreter.interpret_program();
