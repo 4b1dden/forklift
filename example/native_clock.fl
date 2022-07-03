@@ -1,5 +1,6 @@
 let foo = clock();
-for (let i = 0; i < 1000; i = i + 1) {
+let N = 1000000;
+for (let i = 0; i < N; i = i + 1) {
     let a = 2;
 }
 let bar = clock();

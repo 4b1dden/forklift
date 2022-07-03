@@ -1,8 +1,8 @@
 use crate::parser::{
     parse_binary_expression, parse_for_loop, parse_function_definition, parse_identifier,
-    parse_let_binding, parse_literal, parse_number, parse_number_as_expr, parse_while_loop,
-    BinaryExpr, BinaryOperator, Expr, FnDef, ForLoop, Identifier, IfBlock, LetBinding, LiteralExpr,
-    Number, Parser, Reassignment, StringLiteral, WhileLoop,
+    parse_let_binding, parse_literal, parse_number, parse_number_as_expr, parse_return_statement,
+    parse_while_loop, BinaryExpr, BinaryOperator, Expr, FnDef, ForLoop, Identifier, IfBlock,
+    LetBinding, LiteralExpr, Number, Parser, Reassignment, StringLiteral, WhileLoop,
 };
 
 use super::{parse_grouping_expr, parse_if_block, parse_print_statement, parse_string_literal};
@@ -330,4 +330,37 @@ fn test_parse_fn_definition() {
         parser.parse("fun bar() { print 12; }")
     );
     //TODO: fix this lol println!("{:#?}", parser.parse("funfoo(a, b) { print a; }"));
+}
+
+#[test]
+fn test_parse_return_statement() {
+    let parser = parse_return_statement;
+
+    assert_eq!(
+        Ok((
+            "",
+            Some(Expr::Literal(LiteralExpr::NumberLiteral(
+                Number::Integer32(1)
+            )))
+        )),
+        parser("return 1;")
+    );
+
+    assert_eq!(
+        Ok((
+            "",
+            Some(Expr::Binary(BinaryExpr {
+                lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                    Number::Integer32(1)
+                ))),
+                op: BinaryOperator::Plus,
+                rhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
+                    Number::Integer32(2)
+                ))),
+            }))
+        )),
+        parser("return 1 + 2;")
+    );
+
+    assert_eq!(Ok(("", None)), parser("return;"));
 }

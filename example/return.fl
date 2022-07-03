@@ -1,0 +1,15 @@
+fun foo() {
+    print "hello from foo";
+    return 1;
+}
+fun sum(a, b) {
+    if (a < 3) {
+        return a + b;
+    } else {
+        return a - b;
+    }
+}
+let left = 10;
+let right = 3;
+let together = sum(left, right);
+print together;

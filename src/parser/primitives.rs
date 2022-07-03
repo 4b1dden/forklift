@@ -3,9 +3,10 @@ use crate::grammar::{
     wrapped_scope, Declaration, Statement,
 };
 use crate::parser::{
-    and_then, at_least_one_whitespace, either, parse_binary_expression, parse_expr_literal,
-    parse_function_call, parse_unary_expression, sequence_of_monomorphic, trim_whitespace_around,
-    zero_or_more, BoxedParser, Expr, Identifier, Keywords, LiteralExpr, Number, Parser,
+    and_then, at_least_one_whitespace, either, optional_whitespace, parse_binary_expression,
+    parse_expr_literal, parse_function_call, parse_unary_expression, sequence_of_monomorphic,
+    trim_whitespace_around, zero_or_more, BoxedParser, Expr, Identifier, Keywords, LiteralExpr,
+    Number, Parser,
 };
 
 use super::{
@@ -444,6 +445,15 @@ pub fn parse_function_definition<'a>(input: &'a str) -> ParseResult<'a, FnDef> {
         }),
         body,
     })
+    .parse(input)
+}
+
+pub fn parse_return_statement<'a>(input: &'a str) -> ParseResult<'a, Option<Expr>> {
+    end_with_semicolon(pair(
+        trim_whitespace_around(parse_literal("return")),
+        optional(parse_expr),
+    ))
+    .map(|(_, maybe_expr)| maybe_expr)
     .parse(input)
 }
 

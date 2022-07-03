@@ -2,9 +2,9 @@ use crate::parser::{
     any_of_monomorphic, either, either_polymorphic, end_with_semicolon, parse_binary_expression,
     parse_expr_literal, parse_for_loop, parse_function_call, parse_function_definition,
     parse_if_block, parse_let_binding, parse_literal, parse_print_statement, parse_reassignment,
-    parse_unary_expression, parse_while_loop, trim_whitespace_around, triplet, zero_or_more,
-    BoxedParser, Expr, FnDef, ForLoop, Identifier, IfBlock, LetBinding, LiteralExpr, ParseResult,
-    Parser, Reassignment, WhileLoop,
+    parse_return_statement, parse_unary_expression, parse_while_loop, trim_whitespace_around,
+    triplet, zero_or_more, BoxedParser, Expr, FnDef, ForLoop, Identifier, IfBlock, LetBinding,
+    LiteralExpr, ParseResult, Parser, Reassignment, WhileLoop,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -16,6 +16,7 @@ pub enum Statement {
     WhileLoop(Box<WhileLoop>),
     ForLoop(Box<ForLoop>),
     FnDef(Box<FnDef>),
+    Return(Option<Expr>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -38,6 +39,7 @@ pub fn parse_expr_statement<'a>(input: &'a str) -> ParseResult<'a, Expr> {
 pub fn parse_statement<'a>(input: &'a str) -> ParseResult<'a, Statement> {
     // expr | print statement
     any_of_monomorphic(vec![
+        BoxedParser::new(parse_return_statement.map(|maybe_expr| Statement::Return(maybe_expr))),
         BoxedParser::new(parse_function_definition)
             .map(|fn_def| Statement::FnDef(Box::new(fn_def))),
         BoxedParser::new(

@@ -1,14 +1,14 @@
-fun print_name(name) {
-    print name;
-    let a = 1+2;
-}
-let name = "kiko";
-let foo = print_name(name);
-
 fun sum(a, b) {
     let s = a + b;
     print "Sum is:";
     print s;
 }
-let result = sum(10, 20);
-let fail = sum(1, 2, 3);
+fun get_1() {
+    return 1;
+}
+fun get_sum(a, b) {
+    return a + b;
+}
+let one = get_1();
+print one;
+

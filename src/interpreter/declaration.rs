@@ -3,7 +3,7 @@ use std::borrow::BorrowMut;
 use crate::grammar::{Declaration, Statement};
 use crate::interpreter::{
     evaluate_block, evaluate_expr, evaluate_fn_def, evaluate_if_block, evaluate_print_statement,
-    evaluate_while_statement, Environment, FL_T,
+    evaluate_return_statement, evaluate_while_statement, Environment, FL_T,
 };
 use crate::parser::{LetBinding, Reassignment};
 
@@ -32,6 +32,9 @@ pub fn evaluate_statement(statement: &Statement, env: &mut Environment) -> Inter
             evaluate_statement(&desugared_block, env)
         }
         Statement::FnDef(fn_def) => evaluate_fn_def(fn_def, env),
+        Statement::Return(maybe_ret_expr) => {
+            evaluate_return_statement(maybe_ret_expr.as_ref(), env)
+        }
     }
 }
 

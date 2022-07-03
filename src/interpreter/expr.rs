@@ -95,6 +95,16 @@ pub fn evaluate_fn_def(fn_def: &FnDef, env: &mut Environment) -> InterpreterResu
     Ok(FL_T::Unit)
 }
 
+pub fn evaluate_return_statement(
+    maybe_return_expr: Option<&Expr>,
+    env: &mut Environment,
+) -> InterpreterResult<FL_T> {
+    match maybe_return_expr {
+        None => Ok(FL_T::Primitive(FL_T_Primitive::Nil)),
+        Some(return_expr) => evaluate_expr(return_expr, env),
+    }
+}
+
 fn check_fn_def(fn_def: &FnDef) -> InterpreterResult<()> {
     const MAX_ARG_LEN: usize = 255;
 
@@ -154,11 +164,14 @@ impl Display for FL_T {
             FL_T::Primitive(FL_T_Primitive::UInteger128(uint128)) => {
                 write!(f, "{}", uint128)
             }
+            FL_T::Primitive(FL_T_Primitive::Nil) => {
+                write!(f, "nil")
+            }
             FL_T::Callable(fl_t_callable) => {
                 let ident = fl_t_callable.identifier.0.clone();
                 write!(
                     f,
-                    "FL_T_Callable: {:?}({:?})",
+                    "<fn: {:?}({:?})>",
                     ident,
                     fl_t_callable
                         .arguments
@@ -180,6 +193,7 @@ pub enum FL_T_Primitive {
     Integer32(i32),
     Float64(f64),
     UInteger128(u128),
+    Nil,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -418,8 +432,6 @@ pub fn evaluate_fn_call(fn_call: &FnCall, env: &Environment) -> InterpreterResul
                         fn_def_corresponding_arg_name.0.clone(),
                         evaluated_fn_call_arg,
                     )?;
-
-                    println!("{:#?}", &local_fn_call_scope);
                 }
             }
 
@@ -463,6 +475,7 @@ pub fn cast_to_bool(x: &FL_T) -> bool {
         FL_T::Primitive(FL_T_Primitive::Bool(flag)) => *flag,
         FL_T::Primitive(FL_T_Primitive::Float64(float64)) => *float64 > 0_f64,
         FL_T::Primitive(FL_T_Primitive::UInteger128(uint128)) => *uint128 > 0_u128,
+        FL_T::Primitive(FL_T_Primitive::Nil) => false,
         FL_T::Callable(_) => todo!(),
         FL_T::Unit => false,
     }
