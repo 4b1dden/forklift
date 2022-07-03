@@ -210,7 +210,27 @@ impl From<&FnDef> for FL_T_Callable {
     }
 }
 
-pub trait Arity {}
+pub trait Arity {
+    fn arity(&self) -> usize;
+}
+
+impl Arity for &FnCall {
+    fn arity(&self) -> usize {
+        match &self.arguments {
+            None => 0,
+            Some(args) => args.len(),
+        }
+    }
+}
+
+impl Arity for FL_T_Callable {
+    fn arity(&self) -> usize {
+        match &self.arguments {
+            None => 0,
+            Some(args) => args.len(),
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FL_T_Bool {
@@ -376,15 +396,7 @@ pub fn evaluate_fn_call(fn_call: &FnCall, env: &Environment) -> InterpreterResul
         FL_T::Callable(callable_def) => {
             // check if arg len match
             let callable_def_args = &callable_def.arguments;
-            let arg_match = match (&callable_def.arguments, &fn_call.arguments) {
-                (None, None) => true,
-                (Some(callable_def_args), Some(fn_call_args)) => {
-                    callable_def_args.len() == fn_call_args.len()
-                }
-                _ => false,
-            };
-
-            if !arg_match {
+            if fn_call.arity() != callable_def.arity() {
                 return Err(format!(
                     "Arguments count mismatch for {:?} call",
                     fn_call.callee.clone()

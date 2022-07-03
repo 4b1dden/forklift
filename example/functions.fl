@@ -11,3 +11,4 @@ fun sum(a, b) {
     print s;
 }
 let result = sum(10, 20);
+let fail = sum(1, 2, 3);
