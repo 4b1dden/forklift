@@ -2,5 +2,12 @@ fun print_name(name) {
     print name;
     let a = 1+2;
 }
-print print_name;
+let name = "kiko";
+let foo = print_name(name);
 
+fun sum(a, b) {
+    let s = a + b;
+    print "Sum is:";
+    print s;
+}
+let result = sum(10, 20);

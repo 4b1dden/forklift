@@ -80,9 +80,11 @@ impl<'a> Interpreter<'a> {
         self.global_env.put(key, val)
     }
 
-    pub fn interpret_program(&mut self) {
+    pub fn interpret_program(&mut self) -> InterpreterResult<()> {
         for declaration in self.source.iter() {
-            let _ = eval_declaration(declaration, &mut self.global_env);
+            eval_declaration(declaration, &mut self.global_env)?;
         }
+
+        Ok(())
     }
 }

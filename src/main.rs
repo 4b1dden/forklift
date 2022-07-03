@@ -48,6 +48,7 @@ fn load_and_eval_file(path: &Path) {
     println!("[FL]: ------ PROGRAM EVALUATION END");
 
     println!("[FL]: Successfully executed program!");
+    println!("[FL]: {:#?}", executed_prog);
     println!("[FL]: Declarations: {:#?}", dec_count);
     println!("[FL]: Dump of global_env: {:#?}", interpreter.global_env);
 

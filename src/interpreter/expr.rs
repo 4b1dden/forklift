@@ -406,6 +406,8 @@ pub fn evaluate_fn_call(fn_call: &FnCall, env: &Environment) -> InterpreterResul
                         fn_def_corresponding_arg_name.0.clone(),
                         evaluated_fn_call_arg,
                     )?;
+
+                    println!("{:#?}", &local_fn_call_scope);
                 }
             }
 
