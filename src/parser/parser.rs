@@ -341,14 +341,20 @@ pub fn parse_unary_expression<'a>(input: &'a str) -> ParseResult<'a, Expr> {
         BoxedParser::new(parse_single_statement),
     ]);
 
-    pair(unary_op, expr_parser)
+    let res = pair(unary_op, expr_parser)
         .map(|(unary_op, expr)| {
             Expr::Unary(UnaryExpr {
                 op: unary_op,
                 expr: Box::new(expr),
             })
         })
-        .parse(input)
+        .parse(input);
+
+    if res.is_ok() {
+        return res;
+    }
+
+    return parse_function_call_for_expr(input);
 }
 
 pub fn parse_function_call<'a>(input: &'a str) -> ParseResult<'a, Expr> {
@@ -371,7 +377,7 @@ pub fn parse_function_call_for_expr<'a>(input: &'a str) -> ParseResult<'a, Expr>
 
     triplet(
         pair(
-            BoxedParser::new(parse_single_statement),
+            BoxedParser::new(parse_expr_literal), // TODO: This should be changed to parse_statement to achieve full flexibility wrt to function calls
             BoxedParser::new(parse_literal("(")).map(|_| Expr::Literal(LiteralExpr::Empty)),
         ),
         BoxedParser::new(arguments_parser),

@@ -1,0 +1,14 @@
+let global = 12;
+fun foo() {
+    fun inner() {
+        print "hello from inner";
+        return 420;
+    }
+
+    print global;
+
+    return inner;
+}
+
+let con = foo();
+print con();

@@ -7,3 +7,18 @@ for (let i = 0; i < 15; i = i + 1) {
     r = new_r;
     print new_r;
 }
+
+fun fib(n) {
+    if (n < 2) {
+        return n;
+    } else {
+        let l = fib(n-2);
+        let r = fib(n-1);
+        return l + r;
+    }
+}
+
+let result = fib(10);
+print "Fib of 10 is";
+print result;
+
