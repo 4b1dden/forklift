@@ -1,14 +1,10 @@
-fun sum(a, b) {
-    let s = a + b;
-    print "Sum is:";
+fun greet(first, last) {
+    let s = "hello" + first + last;
     print s;
 }
 fun get_1() {
     return 1;
 }
-fun get_sum(a, b) {
-    return a + b;
-}
 let one = get_1();
 print one;
-
+let bb = greet("kiko", "123");

@@ -1,6 +1,11 @@
 ## forklift
 
 my language. not sure what this will yet be, but I always wanted to build a dummy lang from scratch. so far i have no dependencies. 
+
+things to fix {bad}: 
+- [] evaluate fn calls as exprs on separate lines (this is really not as easy as it seems due to stack overflow errors :>)
+- [] empty strings (" ") break the parser? lol
+
 todo:
 - [x] lexer (ended up not using this)
 - [in progress] parser

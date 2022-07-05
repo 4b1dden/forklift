@@ -48,4 +48,6 @@ fn test_parse_statement() {
     }"
         )
     );
+
+    println!("{:#?}", parser("fun foo(a) { print a; return 12; }"));
 }
