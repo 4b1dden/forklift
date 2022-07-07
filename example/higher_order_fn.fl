@@ -1,12 +1,16 @@
 let global = 12;
 print global;
 fun foo() {
+    let i = 0;
+
     fun inner() {
-        return 1;
+        i = i + 1;
+        return i;
     }
 
     return inner;
 }
 
 let a = foo();
+print a();
 print a();

@@ -454,8 +454,11 @@ pub fn evaluate_fn_call(
             }
 
             // fill env for function local scope
-            let mut local_fn_call_scope =
-                Rc::new(RefCell::new(Environment::new(Some(env.clone()))));
+
+            let local_fn_call_scope = callable_def.def_env.upgrade().unwrap_or_else(|| {
+                println!("[FL] Weak does not live anymore. Creating fallback env");
+                Rc::new(RefCell::new(Environment::new(Some(env.clone()))))
+            });
 
             if let Some(fn_call_args) = &fn_call.arguments {
                 for (idx, fn_call_arg) in fn_call_args.iter().enumerate() {
