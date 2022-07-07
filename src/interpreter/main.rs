@@ -1,4 +1,7 @@
+use std::borrow::BorrowMut;
+use std::cell::RefCell;
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use crate::parser::Identifier;
 use crate::{
@@ -8,31 +11,32 @@ use crate::{
 
 use super::{eval_declaration, Callable_Native, FL_T_Callable_Body};
 
-#[derive(Debug, Clone)]
-pub struct Environment<'a> {
-    pub bindings: HashMap<String, FL_T>,
-    pub enclosing: Option<&'a Environment<'a>>,
+#[derive(Debug, Clone, PartialEq)]
+pub struct Environment {
+    pub bindings: HashMap<String, Rc<FL_T>>,
+    pub enclosing: Option<Rc<RefCell<Environment>>>,
 }
 
-impl<'a> Environment<'a> {
-    pub fn new(enclosing: Option<&'a Environment<'a>>) -> Self {
+impl Environment {
+    pub fn new(enclosing: Option<Rc<RefCell<Environment>>>) -> Self {
         Self {
             bindings: HashMap::new(),
             enclosing,
         }
     }
 
-    pub fn get(&self, key: String) -> Option<&FL_T> {
+    pub fn get(&self, key: String) -> Option<Rc<FL_T>> {
         match self.bindings.get(&key) {
-            local_val @ Some(_) => local_val,
+            local_val @ Some(_) => local_val.cloned(),
             None => self
                 .enclosing
-                .and_then(|enclosed_env| enclosed_env.get(key)),
+                .as_ref()
+                .and_then(|enclosed_env| enclosed_env.borrow().get(key)),
         }
     }
 
     /// TODO: should this ever fail? maybe when we have consts
-    pub fn put(&mut self, key: String, val: FL_T) -> InterpreterResult<()> {
+    pub fn put(&mut self, key: String, val: Rc<FL_T>) -> InterpreterResult<()> {
         self.bindings.insert(key, val);
 
         Ok(())
@@ -40,35 +44,40 @@ impl<'a> Environment<'a> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Interpreter<'a> {
+pub struct Interpreter {
     pub source: Program,
-    pub global_env: Environment<'a>,
+    pub global_env: Rc<RefCell<Environment>>,
 }
 
-impl<'a> Interpreter<'a> {
+impl Interpreter {
     pub fn new(source: Program) -> Self {
         Self {
             source,
-            global_env: Environment::new(None),
+            global_env: Rc::new(RefCell::new(Environment::new(None))),
         }
     }
 
     pub fn load_defaults(&mut self) -> InterpreterResult<()> {
+        /*
         let mut defaults = HashMap::new();
 
         defaults.insert(
             String::from("clock"),
-            FL_T::Callable(FL_T_Callable {
+            Rc::new(FL_T::Callable(FL_T_Callable {
                 identifier: Identifier(String::from("clock")),
                 arguments: None,
                 body: FL_T_Callable_Body::Native(Callable_Native::Clock),
-            }),
+                def_env: self.global_env.clone(),
+            })),
         );
 
         self.preload_with(defaults)
+        */
+
+        Ok(())
     }
 
-    pub fn preload_with(&mut self, m: HashMap<String, FL_T>) -> InterpreterResult<()> {
+    pub fn preload_with(&mut self, m: HashMap<String, Rc<FL_T>>) -> InterpreterResult<()> {
         for (key, val) in m {
             self.inject_into_global_env(key, val)?;
         }
@@ -76,13 +85,13 @@ impl<'a> Interpreter<'a> {
         Ok(())
     }
 
-    pub fn inject_into_global_env(&mut self, key: String, val: FL_T) -> InterpreterResult<()> {
-        self.global_env.put(key, val)
+    pub fn inject_into_global_env(&mut self, key: String, val: Rc<FL_T>) -> InterpreterResult<()> {
+        RefCell::borrow_mut(&self.global_env).put(key, val)
     }
 
     pub fn interpret_program(&mut self) -> InterpreterResult<()> {
         for declaration in self.source.iter() {
-            eval_declaration(declaration, &mut self.global_env)?;
+            eval_declaration(declaration, self.global_env.clone())?;
         }
 
         Ok(())

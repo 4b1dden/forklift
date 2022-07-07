@@ -1,7 +1,9 @@
 use std::borrow::BorrowMut;
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Display;
-use std::ops::{Add, Div, Mul, Sub};
+use std::ops::{Add, Deref, Div, Mul, Sub};
+use std::rc::Rc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::grammar::{Declaration, Statement};
@@ -13,7 +15,7 @@ use crate::parser::{
 
 use super::{evaluate_statement, InterpreterResult};
 
-pub fn evaluate_expr(expr: &Expr, env: &Environment) -> InterpreterResult<FL_T> {
+pub fn evaluate_expr(expr: &Expr, env: Rc<RefCell<Environment>>) -> InterpreterResult<FL_T> {
     match expr {
         Expr::Literal(literal_expr) => evaluate_literal_expr(literal_expr, env),
         Expr::Unary(unary_expr) => evaluate_unary_expr(unary_expr, env),
@@ -23,7 +25,10 @@ pub fn evaluate_expr(expr: &Expr, env: &Environment) -> InterpreterResult<FL_T> 
     }
 }
 
-pub fn evaluate_print_statement(expr: &Expr, env: &Environment) -> InterpreterResult<FL_T> {
+pub fn evaluate_print_statement(
+    expr: &Expr,
+    env: Rc<RefCell<Environment>>,
+) -> InterpreterResult<FL_T> {
     let evaluated = evaluate_expr(expr, env)?;
 
     println!("{}", evaluated);
@@ -33,30 +38,32 @@ pub fn evaluate_print_statement(expr: &Expr, env: &Environment) -> InterpreterRe
 
 pub fn evaluate_block(
     declarations: &[Declaration],
-    env: &mut Environment,
+    env: Rc<RefCell<Environment>>,
 ) -> InterpreterResult<FL_T> {
-    let mut local_env = Environment::new(Some(&env));
-    local_env.bindings = env.bindings.clone();
+    let local_env = Rc::new(RefCell::new(Environment::new(Some(env.clone()))));
+    RefCell::borrow_mut(&local_env).bindings = env.borrow().bindings.clone();
 
     let mut last_result = FL_T::Unit;
     for declaration in declarations.iter() {
-        last_result = eval_declaration(declaration, env)?;
+        last_result = eval_declaration(declaration, env.clone())?;
     }
 
     return Ok(last_result);
 }
 
-pub fn evaluate_if_block(if_block: &IfBlock, env: &Environment) -> InterpreterResult<FL_T> {
-    let determinant = evaluate_expr(&if_block.cond, env)?;
+pub fn evaluate_if_block(
+    if_block: &IfBlock,
+    env: Rc<RefCell<Environment>>,
+) -> InterpreterResult<FL_T> {
+    let determinant = evaluate_expr(&if_block.cond, env.clone())?;
     let if_clause_condition = cast_to_bool(&determinant);
-    let mut local_env = Environment::new(Some(&env));
+    let mut local_env = Rc::new(RefCell::new(Environment::new(Some(env.clone()))));
 
     let mut last_result = FL_T::Unit;
     if if_clause_condition {
-        last_result = evaluate_statement(&if_block.truthy_statement, &mut local_env)?;
+        last_result = evaluate_statement(&if_block.truthy_statement, local_env)?;
     } else if if_block.else_statement.is_some() {
-        last_result =
-            evaluate_statement(if_block.else_statement.as_ref().unwrap(), &mut local_env)?;
+        last_result = evaluate_statement(if_block.else_statement.as_ref().unwrap(), local_env)?;
     }
 
     Ok(last_result)
@@ -64,19 +71,19 @@ pub fn evaluate_if_block(if_block: &IfBlock, env: &Environment) -> InterpreterRe
 
 pub fn evaluate_while_statement(
     while_loop: &WhileLoop,
-    env: &mut Environment,
+    env: Rc<RefCell<Environment>>,
 ) -> InterpreterResult<FL_T> {
     let mut determinant;
     let mut determinant_as_bool;
     let mut last_result: InterpreterResult<FL_T> = Ok(FL_T::Unit);
-    let mut local_env = Environment::new(Some(&env));
+    let mut local_env = Environment::new(Some(env.clone()));
 
     loop {
-        determinant = evaluate_expr(&while_loop.condition, env)?;
+        determinant = evaluate_expr(&while_loop.condition, env.clone())?;
         determinant_as_bool = cast_to_bool(&determinant);
 
         if determinant_as_bool {
-            last_result = evaluate_statement(&while_loop.body, env);
+            last_result = evaluate_statement(&while_loop.body, env.clone());
         } else {
             break; // while loop cond is no longer true
         }
@@ -85,19 +92,22 @@ pub fn evaluate_while_statement(
     last_result
 }
 
-pub fn evaluate_fn_def(fn_def: &FnDef, env: &mut Environment) -> InterpreterResult<FL_T> {
+pub fn evaluate_fn_def(fn_def: &FnDef, env: Rc<RefCell<Environment>>) -> InterpreterResult<FL_T> {
     check_fn_def(fn_def)?;
 
-    let fl_t_callable: FL_T_Callable = fn_def.into();
+    let fl_t_callable = FL_T_Callable::from_fn_def(fn_def, env.clone());
 
-    let res = env.put(fn_def.identifier.0.clone(), FL_T::Callable(fl_t_callable));
+    let res = RefCell::borrow_mut(&env).put(
+        fn_def.identifier.0.clone(),
+        Rc::new(FL_T::Callable(fl_t_callable)),
+    );
 
     Ok(FL_T::Unit)
 }
 
 pub fn evaluate_return_statement(
     maybe_return_expr: Option<&Expr>,
-    env: &mut Environment,
+    env: Rc<RefCell<Environment>>,
 ) -> InterpreterResult<FL_T> {
     match maybe_return_expr {
         None => Ok(FL_T::Primitive(FL_T_Primitive::Nil)),
@@ -201,6 +211,7 @@ pub struct FL_T_Callable {
     pub identifier: Identifier,
     pub arguments: Option<Vec<Identifier>>, // ?
     pub body: FL_T_Callable_Body,
+    pub def_env: Rc<RefCell<Environment>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -214,12 +225,13 @@ pub enum Callable_Native {
     Clock,
 }
 
-impl From<&FnDef> for FL_T_Callable {
-    fn from(incoming: &FnDef) -> Self {
+impl FL_T_Callable {
+    fn from_fn_def(incoming: &FnDef, def_env: Rc<RefCell<Environment>>) -> Self {
         Self {
             identifier: incoming.identifier.clone(),
             arguments: incoming.arguments.clone(),
             body: FL_T_Callable_Body::FL_T(incoming.body.clone()),
+            def_env,
         }
     }
 }
@@ -252,12 +264,17 @@ pub enum FL_T_Bool {
     False,
 }
 
-pub fn evaluate_literal_expr(expr: &LiteralExpr, env: &Environment) -> InterpreterResult<FL_T> {
+pub fn evaluate_literal_expr(
+    expr: &LiteralExpr,
+    env: Rc<RefCell<Environment>>,
+) -> InterpreterResult<FL_T> {
     match expr {
         LiteralExpr::Identifier(ident) => env
+            .deref()
+            .borrow()
             .get(ident.0.clone())
             .ok_or(format!("{} not found", ident.0))
-            .cloned(),
+            .map(|x| x.deref().clone()),
         LiteralExpr::Keyword(keyword) => todo!(),
         LiteralExpr::NumberLiteral(Number::Integer32(num)) => {
             Ok(FL_T::Primitive(FL_T_Primitive::Integer32(*num)))
@@ -280,7 +297,10 @@ fn negate_fl_t(t: FL_T) -> FL_T {
     }
 }
 
-pub fn evaluate_unary_expr(unary_expr: &UnaryExpr, env: &Environment) -> InterpreterResult<FL_T> {
+pub fn evaluate_unary_expr(
+    unary_expr: &UnaryExpr,
+    env: Rc<RefCell<Environment>>,
+) -> InterpreterResult<FL_T> {
     let evaluated_inside = evaluate_expr(&unary_expr.expr, env)?;
 
     match unary_expr.op {
@@ -391,20 +411,29 @@ pub fn apply_str_bin_op(
     }
 }
 
-pub fn evaluate_binary_expr(expr: &BinaryExpr, env: &Environment) -> InterpreterResult<FL_T> {
-    let left = evaluate_expr(&expr.lhs, env)?;
-    let right = evaluate_expr(&expr.rhs, env)?;
+pub fn evaluate_binary_expr(
+    expr: &BinaryExpr,
+    env: Rc<RefCell<Environment>>,
+) -> InterpreterResult<FL_T> {
+    let left = evaluate_expr(&expr.lhs, env.clone())?;
+    let right = evaluate_expr(&expr.rhs, env.clone())?;
     let op = &expr.op;
 
     apply_bin_op_to_bin_expr(left, op, right)
 }
 
-pub fn evaluate_grouping_expr(expr: &Box<Expr>, env: &Environment) -> InterpreterResult<FL_T> {
+pub fn evaluate_grouping_expr(
+    expr: &Box<Expr>,
+    env: Rc<RefCell<Environment>>,
+) -> InterpreterResult<FL_T> {
     evaluate_expr(&expr, env)
 }
 
-pub fn evaluate_fn_call(fn_call: &FnCall, env: &Environment) -> InterpreterResult<FL_T> {
-    let callee_eval = evaluate_expr(&fn_call.callee, env)?;
+pub fn evaluate_fn_call(
+    fn_call: &FnCall,
+    env: Rc<RefCell<Environment>>,
+) -> InterpreterResult<FL_T> {
+    let callee_eval = evaluate_expr(&fn_call.callee, env.clone())?;
 
     match callee_eval {
         FL_T::Callable(callable_def) => {
@@ -418,19 +447,20 @@ pub fn evaluate_fn_call(fn_call: &FnCall, env: &Environment) -> InterpreterResul
             }
 
             // fill env for function local scope
-            let mut local_fn_call_scope = Environment::new(Some(&env));
+            let mut local_fn_call_scope =
+                Rc::new(RefCell::new(Environment::new(Some(env.clone()))));
 
             if let Some(fn_call_args) = &fn_call.arguments {
                 for (idx, fn_call_arg) in fn_call_args.iter().enumerate() {
                     let fn_def_corresponding_arg_name =
                         callable_def_args.as_ref().unwrap().get(idx).unwrap();
 
-                    let evaluated_fn_call_arg = evaluate_expr(fn_call_arg, env)?;
+                    let evaluated_fn_call_arg = evaluate_expr(fn_call_arg, env.clone())?;
 
                     // fill new local scope with evaluated values
-                    local_fn_call_scope.put(
+                    RefCell::borrow_mut(&local_fn_call_scope).put(
                         fn_def_corresponding_arg_name.0.clone(),
-                        evaluated_fn_call_arg,
+                        Rc::new(evaluated_fn_call_arg),
                     )?;
                 }
             }
@@ -438,10 +468,10 @@ pub fn evaluate_fn_call(fn_call: &FnCall, env: &Environment) -> InterpreterResul
             // evaluate function body with new function scope env
             match callable_def.body {
                 FL_T_Callable_Body::FL_T(body_statement) => {
-                    evaluate_statement(&body_statement, &mut local_fn_call_scope)
+                    evaluate_statement(&body_statement, local_fn_call_scope.clone())
                 }
                 FL_T_Callable_Body::Native(native_fn_variant) => {
-                    evaluate_native_fn_variant(native_fn_variant, &mut local_fn_call_scope)
+                    evaluate_native_fn_variant(native_fn_variant, local_fn_call_scope.clone())
                 }
             }
         }
@@ -451,7 +481,7 @@ pub fn evaluate_fn_call(fn_call: &FnCall, env: &Environment) -> InterpreterResul
 
 pub fn evaluate_native_fn_variant(
     native_fn_variant: Callable_Native,
-    env: &mut Environment,
+    env: Rc<RefCell<Environment>>,
 ) -> InterpreterResult<FL_T> {
     match native_fn_variant {
         Callable_Native::Clock => {

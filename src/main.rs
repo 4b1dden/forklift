@@ -1,8 +1,10 @@
+use std::cell::RefCell;
 use std::env;
 use std::fs;
 use std::io::{self, BufRead};
 use std::path::Path;
 use std::process::exit;
+use std::rc::Rc;
 
 mod grammar;
 mod interpreter;
@@ -34,6 +36,7 @@ fn main() {
 fn load_and_eval_file(path: &Path) {
     let contents = fs::read_to_string(path).expect("Filepath has to be valid");
 
+    println!("fooo");
     let program_parser = grammar::parse_program();
     let (rest, parsed_program) = program_parser.parse(&contents).unwrap();
 
@@ -59,7 +62,7 @@ fn run_repl_loop() {
     let mut line = String::new();
     let stdin = io::stdin();
     let parser = grammar::parse_program();
-    let mut repl_env = Environment::new(None);
+    let mut repl_env = Rc::new(RefCell::new(Environment::new(None)));
 
     loop {
         println!("fl >>>");
@@ -68,7 +71,7 @@ fn run_repl_loop() {
 
         if line.trim().to_lowercase() != "exit" {
             let (rest, dec) = grammar::parse_declaration(&line).unwrap();
-            let evaled = interpreter::declaration::eval_declaration(&dec, &mut repl_env);
+            let evaled = interpreter::declaration::eval_declaration(&dec, repl_env.clone());
             println!("evaluated ---> {:#?} \n rest ---> {:#?}", evaled, rest);
         } else {
             break;

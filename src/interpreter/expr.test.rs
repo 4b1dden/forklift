@@ -6,7 +6,7 @@ use crate::parser::{
     Reassignment, StringLiteral, UnaryExpr, UnaryOperator,
 };
 
-fn empty_env() -> Environment<'static> {
+fn empty_env() -> Environment {
     let ENV = Environment::new(None);
 
     ENV
