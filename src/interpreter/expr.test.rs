@@ -1,3 +1,6 @@
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use super::{desugar_for_loop_to_while_block, evaluate_expr, FL_T_Primitive, FL_T};
 use crate::grammar::{Declaration, Statement};
 use crate::interpreter::Environment;
@@ -6,10 +9,8 @@ use crate::parser::{
     Reassignment, StringLiteral, UnaryExpr, UnaryOperator,
 };
 
-fn empty_env() -> Environment {
-    let ENV = Environment::new(None);
-
-    ENV
+fn empty_env() -> Rc<RefCell<Environment>> {
+    Rc::new(RefCell::new(Environment::new(None)))
 }
 
 #[test]
@@ -17,7 +18,7 @@ fn test_literal_expr() {
     let to_intepret = Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(3)));
 
     assert_eq!(
-        evaluate_expr(&to_intepret, &empty_env()),
+        evaluate_expr(&to_intepret, empty_env()),
         Ok(FL_T::Primitive(FL_T_Primitive::Integer32(3)))
     );
 }
@@ -38,12 +39,12 @@ fn test_unary_expr() {
     });
 
     assert_eq!(
-        evaluate_expr(&to_intepret, &empty_env()),
+        evaluate_expr(&to_intepret, empty_env()),
         Ok(FL_T::Primitive(FL_T_Primitive::Integer32(-5)))
     );
 
     assert_eq!(
-        evaluate_expr(&nested, &empty_env()),
+        evaluate_expr(&nested, empty_env()),
         Ok(FL_T::Primitive(FL_T_Primitive::Integer32(5)))
     );
 }
@@ -70,12 +71,12 @@ fn test_binary_expr() {
     });
 
     assert_eq!(
-        evaluate_expr(&inner, &empty_env()),
+        evaluate_expr(&inner, empty_env()),
         Ok(FL_T::Primitive(FL_T_Primitive::Integer32(50)))
     );
 
     assert_eq!(
-        evaluate_expr(&nested, &empty_env()),
+        evaluate_expr(&nested, empty_env()),
         Ok(FL_T::Primitive(FL_T_Primitive::Integer32(53)))
     );
 }

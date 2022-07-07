@@ -79,7 +79,6 @@ pub fn parse_declaration<'a>(input: &'a str) -> ParseResult<'a, Declaration> {
         BoxedParser::new(decl_let_binding),
         BoxedParser::new(decl_reassignment),
         BoxedParser::new(decl_statement),
-        // decl_scoped_block(),
     ]))
     .parse(input)
 }

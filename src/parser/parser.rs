@@ -116,15 +116,24 @@ pub fn parse_expr_literal<'a>(input: &'a str) -> ParseResult<'a, Expr> {
 pub fn parse_single_statement<'a>(input: &'a str) -> ParseResult<'a, Expr> {
     // todo: impl fully
     // expr_literal | ... ?
-    any_of_monomorphic(vec![
-        // BoxedParser::new(parse_binary_expression),
-        BoxedParser::new(parse_grouping_expr_2),
-        BoxedParser::new(parse_unary_expression),
-        //        BoxedParser::new(parse_function_call_for_expr.clone()),
-        BoxedParser::new(parse_expr_literal),
-        BoxedParser::new(parse_string_literal()),
-    ])
-    .parse(input)
+
+    if let Ok(res) = parse_grouping_expr_2(input) {
+        return Ok(res);
+    }
+
+    if let Ok(res) = parse_unary_expression(input) {
+        return Ok(res);
+    }
+
+    if let Ok(res) = parse_expr_literal(input) {
+        return Ok(res);
+    }
+
+    if let Ok(res) = parse_string_literal().parse(input) {
+        return Ok(res);
+    }
+
+    Err(String::from("parse_single_statement not matched"))
 }
 
 #[derive(Clone, Debug, PartialEq)]
