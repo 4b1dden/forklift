@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Display;
 use std::ops::{Add, Deref, Div, Mul, Sub};
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::grammar::{Declaration, Statement};
@@ -95,7 +95,7 @@ pub fn evaluate_while_statement(
 pub fn evaluate_fn_def(fn_def: &FnDef, env: Rc<RefCell<Environment>>) -> InterpreterResult<FL_T> {
     check_fn_def(fn_def)?;
 
-    let fl_t_callable = FL_T_Callable::from_fn_def(fn_def, env.clone());
+    let fl_t_callable = FL_T_Callable::from_fn_def(fn_def, Rc::downgrade(&env));
 
     let res = RefCell::borrow_mut(&env).put(
         fn_def.identifier.0.clone(),
@@ -206,14 +206,21 @@ pub enum FL_T_Primitive {
     Nil,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub struct FL_T_Callable {
     pub identifier: Identifier,
     pub arguments: Option<Vec<Identifier>>, // ?
     pub body: FL_T_Callable_Body,
-    pub def_env: Rc<RefCell<Environment>>,
+    pub def_env: Weak<RefCell<Environment>>,
 }
 
+impl PartialEq for FL_T_Callable {
+    fn eq(&self, other: &Self) -> bool {
+        self.identifier.eq(&other.identifier)
+            && self.arguments.eq(&other.arguments)
+            && self.body.eq(&other.body)
+    }
+}
 #[derive(Debug, Clone, PartialEq)]
 pub enum FL_T_Callable_Body {
     Native(Callable_Native), // Rust
@@ -226,7 +233,7 @@ pub enum Callable_Native {
 }
 
 impl FL_T_Callable {
-    fn from_fn_def(incoming: &FnDef, def_env: Rc<RefCell<Environment>>) -> Self {
+    fn from_fn_def(incoming: &FnDef, def_env: Weak<RefCell<Environment>>) -> Self {
         Self {
             identifier: incoming.identifier.clone(),
             arguments: incoming.arguments.clone(),
