@@ -6,6 +6,8 @@ use std::ops::{Add, Deref, Div, Mul, Sub};
 use std::rc::{Rc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use ordered_float::OrderedFloat;
+
 use crate::grammar::{Declaration, Statement};
 use crate::interpreter::{eval_declaration, Environment};
 use crate::parser::{
@@ -282,11 +284,10 @@ pub fn evaluate_literal_expr(
             .get(ident.0.clone())
             .ok_or(format!("{} not found", ident.0))
             .map(|x| x.deref().clone()),
-        LiteralExpr::Keyword(keyword) => todo!(),
         LiteralExpr::NumberLiteral(Number::Integer32(num)) => {
             Ok(FL_T::Primitive(FL_T_Primitive::Integer32(*num)))
         }
-        LiteralExpr::NumberLiteral(Number::Float64(float64)) => {
+        LiteralExpr::NumberLiteral(Number::Float64(OrderedFloat(float64))) => {
             Ok(FL_T::Primitive(FL_T_Primitive::Float64(*float64)))
         }
         LiteralExpr::StringLiteral(s) => Ok(FL_T::Primitive(FL_T_Primitive::Str(s.0.clone()))),

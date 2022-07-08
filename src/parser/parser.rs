@@ -44,7 +44,7 @@ pub trait Parser<'a, Output> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Eq, Hash, Debug, PartialEq)]
 pub enum BinaryOperator {
     // Arithmetic
     Plus,
@@ -61,7 +61,7 @@ pub enum BinaryOperator {
     GreaterEq,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Eq, Hash, Debug, PartialEq)]
 pub enum UnaryOperator {
     Minus,
     Bang,
@@ -95,7 +95,7 @@ impl From<&str> for UnaryOperator {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Eq, Hash, Debug, PartialEq)]
 pub enum Expr {
     Literal(LiteralExpr),
     Unary(UnaryExpr),
@@ -136,48 +136,42 @@ pub fn parse_single_statement<'a>(input: &'a str) -> ParseResult<'a, Expr> {
     Err(String::from("parse_single_statement not matched"))
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Eq, Hash, Debug, PartialEq)]
 pub enum LiteralExpr {
     Identifier(Identifier),
     StringLiteral(StringLiteral),
-    Keyword(Keywords),
     NumberLiteral(Number),
     // TODO: this is not good for sure
     Empty,
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum Keywords {
-    Let,
-    Print, // for early development only, we'll remove this later
-}
-
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Eq, Hash, Debug, PartialEq)]
 pub struct Identifier(pub String);
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Eq, Hash, Debug, PartialEq)]
 pub struct StringLiteral(pub String);
 
-#[derive(Clone, Debug, PartialEq)]
+use ordered_float::OrderedFloat;
+#[derive(Clone, Eq, Hash, Debug, PartialEq)]
 pub enum Number {
     Integer32(i32),
-    Float64(f64),
+    Float64(OrderedFloat<f64>),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Eq, Hash, Debug, PartialEq)]
 pub struct BinaryExpr {
     pub lhs: Box<Expr>,
     pub op: BinaryOperator,
     pub rhs: Box<Expr>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Eq, Hash, Debug, PartialEq)]
 pub struct UnaryExpr {
     pub op: UnaryOperator,
     pub expr: Box<Expr>,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Eq, Hash, Debug, PartialEq)]
 pub struct FnCall {
     pub callee: Expr,
     pub arguments: Option<Vec<Expr>>,

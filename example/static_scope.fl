@@ -1,0 +1,6 @@
+let a = "global";
+fun showA() {
+    print a;
+}
+showA();
+let foo = "bar";

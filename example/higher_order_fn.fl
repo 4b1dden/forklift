@@ -14,3 +14,4 @@ fun foo() {
 let a = foo();
 print a();
 print a();
+print a();

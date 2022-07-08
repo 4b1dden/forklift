@@ -4,6 +4,7 @@ use crate::parser::{
     parse_while_loop, BinaryExpr, BinaryOperator, Expr, FnDef, ForLoop, Identifier, IfBlock,
     LetBinding, LiteralExpr, Number, Parser, Reassignment, StringLiteral, WhileLoop,
 };
+use ordered_float::OrderedFloat;
 
 use super::{parse_grouping_expr, parse_if_block, parse_print_statement, parse_string_literal};
 use crate::grammar::{Declaration, Statement};
@@ -29,7 +30,9 @@ fn test_parse_number_float() {
     assert_eq!(
         Ok((
             "",
-            Expr::Literal(LiteralExpr::NumberLiteral(Number::Float64(12.34)))
+            Expr::Literal(LiteralExpr::NumberLiteral(Number::Float64(OrderedFloat(
+                12.34
+            ))))
         )),
         as_expr
     );

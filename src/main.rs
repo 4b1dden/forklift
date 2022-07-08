@@ -11,7 +11,7 @@ mod interpreter;
 mod parser;
 
 use crate::grammar::parse_declaration;
-use crate::interpreter::{Environment, Interpreter};
+use crate::interpreter::{resolver::Resolver, Environment, Interpreter};
 use crate::parser::{BoxedParser, Expr, Parser};
 
 fn main() {
@@ -36,24 +36,33 @@ fn main() {
 fn load_and_eval_file(path: &Path) {
     let contents = fs::read_to_string(path).expect("Filepath has to be valid");
 
-    println!("fooo");
     let program_parser = grammar::parse_program();
     let (rest, parsed_program) = program_parser.parse(&contents).unwrap();
 
     println!("{:#?}", parsed_program);
 
     let dec_count = parsed_program.len();
-    let mut interpreter = Interpreter::new(parsed_program);
-    let res = interpreter.load_defaults();
+    let mut interpreter = Interpreter::new(parsed_program.clone());
+    let mut resolver = Resolver::new(interpreter);
+
+    resolver.resolve_program(parsed_program);
+    println!("[FL]: ------ FINISHED PROGRAM RESOLUTION");
+    println!("{:#?}", &resolver.interpreter.locals);
 
     println!("[FL]: ------ PROGRAM EVALUATION START");
-    let executed_prog = interpreter.interpret_program();
+    // let executed_prog = interpreter.interpret_program();
+
     println!("[FL]: ------ PROGRAM EVALUATION END");
 
     println!("[FL]: Successfully executed program!");
-    println!("[FL]: {:#?}", executed_prog);
+    //println!("[FL]: {:#?}", executed_prog);
     println!("[FL]: Declarations: {:#?}", dec_count);
-    println!("[FL]: Dump of global_env: {:#?}", interpreter.global_env);
+    /*
+    println!(
+        "[FL]: Dump of global_env: {:?}",
+        &resolver.interpreter.global_env
+    );
+    */
 
     // println!("{:#?}", parsed_program);
 }

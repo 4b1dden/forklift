@@ -1,0 +1,11 @@
+{
+    let a = "foo";
+    let b = 2 * 3 + 4;
+    {
+        let foo = "bar";
+        if (1) {
+            print foo;
+            let c = a + b;
+        }
+    }
+}

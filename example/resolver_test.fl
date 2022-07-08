@@ -1,0 +1,6 @@
+{
+    let inside = 1;
+    if (1) {
+        print inside;
+    }
+}

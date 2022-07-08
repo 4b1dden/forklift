@@ -5,14 +5,16 @@ use crate::grammar::{
 use crate::parser::{
     and_then, at_least_one_whitespace, either, optional_whitespace, parse_binary_expression,
     parse_expr_literal, parse_function_call, parse_unary_expression, sequence_of_monomorphic,
-    trim_whitespace_around, zero_or_more, BoxedParser, Expr, Identifier, Keywords, LiteralExpr,
-    Number, Parser,
+    trim_whitespace_around, zero_or_more, BoxedParser, Expr, Identifier, LiteralExpr, Number,
+    Parser,
 };
 
 use super::{
     any_of_monomorphic, map, optional, pair, parse_function_call_for_expr, triplet, ParseResult,
     StringLiteral,
 };
+
+use ordered_float::OrderedFloat;
 
 pub fn parse_number<'a>() -> impl Parser<'a, &'a str> {
     move |input: &'a str| {
@@ -90,7 +92,7 @@ pub fn parse_number_as_expr<'a>() -> impl Parser<'a, Expr> {
                         .parse::<f64>()
                         .map_err(|_| String::from("Could not parse to i32"));
 
-                    LiteralExpr::NumberLiteral(Number::Float64(parsed?))
+                    LiteralExpr::NumberLiteral(Number::Float64(OrderedFloat(parsed?)))
                 } else {
                     let parsed: Result<i32, String> = m
                         .parse::<i32>()
@@ -105,15 +107,6 @@ pub fn parse_number_as_expr<'a>() -> impl Parser<'a, Expr> {
         }
     }
     //.map(|num| Expr::Literal(LiteralExpr::NumberLiteral(Number(num.parse().unwrap()))))
-}
-
-// TODO: extend to parse_keyword probably
-pub fn parse_let_keyword<'a>() -> impl Parser<'a, Expr> {
-    parse_literal("let").map(|literal_as_expr| Expr::Literal(LiteralExpr::Keyword(Keywords::Let)))
-}
-
-pub fn parse_print_keyword<'a>() -> impl Parser<'a, Expr> {
-    parse_literal("print").map(|print_as_expr| Expr::Literal(LiteralExpr::Keyword(Keywords::Print)))
 }
 
 pub fn parse_literal<'a>(literal: &'a str) -> impl Parser<'a, &'a str> {
@@ -185,7 +178,7 @@ pub fn parse_expr<'a>(input: &'a str) -> ParseResult<'a, Expr> {
 
 pub fn parse_let_binding<'a>() -> impl Parser<'a, LetBinding> {
     sequence_of_monomorphic(vec![
-        BoxedParser::new(parse_let_keyword()),
+        BoxedParser::new(parse_literal("let")).map(|_| Expr::Literal(LiteralExpr::Empty)),
         BoxedParser::new(at_least_one_whitespace().map(|_| Expr::Literal(LiteralExpr::Empty))),
         BoxedParser::new(parse_identifier_as_expr()),
         BoxedParser::new(
@@ -333,7 +326,7 @@ pub fn ensure_is_identifier(e: Expr) -> Identifier {
 
 pub fn parse_print_statement<'a>(input: &'a str) -> ParseResult<'a, Expr> {
     sequence_of_monomorphic(vec![
-        BoxedParser::new(parse_print_keyword()),
+        BoxedParser::new(parse_literal("print")).map(|_| Expr::Literal(LiteralExpr::Empty)),
         BoxedParser::new(at_least_one_whitespace().map(|_| Expr::Literal(LiteralExpr::Empty))),
         BoxedParser::new(parse_expr),
         BoxedParser::new(parse_literal(";").map(|_| Expr::Literal(LiteralExpr::Empty))),

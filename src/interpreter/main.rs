@@ -3,7 +3,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use crate::parser::Identifier;
+use crate::parser::{Expr, Identifier};
 use crate::{
     grammar::{Declaration, Program},
     interpreter::{FL_T_Callable, InterpreterResult, FL_T},
@@ -47,14 +47,24 @@ impl Environment {
 pub struct Interpreter {
     pub source: Program,
     pub global_env: Rc<RefCell<Environment>>,
+    pub locals: HashMap<Expr, usize>, // depth
 }
 
 impl Interpreter {
     pub fn new(source: Program) -> Self {
-        Self {
+        let mut me = Self {
             source,
             global_env: Rc::new(RefCell::new(Environment::new(None))),
-        }
+            locals: HashMap::new(),
+        };
+
+        me.load_defaults();
+
+        me
+    }
+
+    pub fn resolve(&mut self, expr: Expr, depth: usize) {
+        self.locals.insert(expr, depth);
     }
 
     pub fn load_defaults(&mut self) -> InterpreterResult<()> {
