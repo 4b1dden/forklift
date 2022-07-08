@@ -65,6 +65,10 @@ impl Interpreter {
 
     pub fn resolve(&mut self, expr: Expr, depth: usize) {
         self.locals.insert(expr, depth);
+        println!(
+            "inserted into interpreter locals, locals: {:#?}",
+            &self.locals
+        );
     }
 
     pub fn load_defaults(&mut self) -> InterpreterResult<()> {

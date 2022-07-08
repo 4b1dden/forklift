@@ -1,6 +1,13 @@
 {
     let inside = 1;
-    if (1) {
+    let hello_world = "yo";
+    {
         print inside;
+        let foo = 420;
+        {
+            print foo;
+            let bar = -foo;
+            print hello_world;
+        }
     }
 }

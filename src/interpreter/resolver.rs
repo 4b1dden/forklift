@@ -6,6 +6,7 @@ use crate::{
     parser::{Expr, FnCall, FnDef, Identifier, LetBinding, LiteralExpr},
 };
 
+#[derive(Debug)]
 pub struct Resolver {
     pub scopes: Vec<HashMap<String, bool>>,
     pub interpreter: Interpreter,
@@ -26,7 +27,7 @@ impl Resolver {
         self.begin_scope();
 
         for declaration in declarations.iter() {
-            self.resolve_declaration(declaration);
+            self.resolve_declaration(declaration)?;
         }
 
         self.end_scope();
@@ -47,8 +48,8 @@ impl Resolver {
         match statement {
             Statement::Block(declarations) => self.resolve_block_statement(declarations),
             Statement::FnDef(fn_def) => {
-                self.declare(fn_def.identifier.clone());
-                self.define(fn_def.identifier.clone());
+                self.declare(fn_def.identifier.clone())?;
+                self.define(fn_def.identifier.clone())?;
 
                 self.resolve_fn_def(&fn_def)
             }
@@ -84,7 +85,7 @@ impl Resolver {
         match declaration {
             Declaration::Let(let_binding) => self.resolve_let_binding(let_binding),
             Declaration::Reassignment(reassignment) => {
-                self.resolve_expr(&reassignment.rhs);
+                self.resolve_expr(&reassignment.rhs)?;
 
                 self.resolve_local(&reassignment.rhs, &reassignment.identifier)
             }
@@ -93,6 +94,7 @@ impl Resolver {
     }
 
     pub fn resolve_expr(&mut self, expr: &Expr) -> InterpreterResult<()> {
+        println!("resolving {:#?}, self.scopes: {:#?}", expr, &self.scopes);
         match expr {
             Expr::Literal(literal_expr) => self.resolve_literal_expr(literal_expr),
             Expr::Unary(unary_expr) => self.resolve_expr(&*unary_expr.expr),
@@ -141,6 +143,11 @@ impl Resolver {
             }
         }
 
+        self.resolve_local(
+            &Expr::Literal(LiteralExpr::Identifier(identifier.clone())),
+            identifier,
+        )?;
+
         Ok(())
     }
 
@@ -159,12 +166,12 @@ impl Resolver {
 
         if let Some(args) = &fn_def.arguments {
             for arg in args.iter() {
-                self.declare(arg.clone());
-                self.define(arg.clone());
+                self.declare(arg.clone())?;
+                self.define(arg.clone())?;
             }
         }
 
-        self.resolve_statement(fn_def.body.clone());
+        self.resolve_statement(fn_def.body.clone())?;
 
         self.end_scope();
 
@@ -191,23 +198,6 @@ impl Resolver {
         }
 
         Ok(())
-        /*
-        for (scope, map) in self.scopes.iter().rev().enumerate() {
-            if map.contains_key(&identifier.0) {
-                println!(
-                    "Found {:?} in {:?} scope, scope_size = {:?}",
-                    &identifier.0,
-                    scope,
-                    self.scopes.len(),
-                );
-                self.resolve_for_interpreter(expr, scope);
-                return Ok(());
-            }
-        }
-
-        println!("did not resolve!");
-        Ok(())
-        */
     }
 
     fn resolve_for_interpreter(&mut self, expr: &Expr, depth: usize) {
