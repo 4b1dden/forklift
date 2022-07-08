@@ -9,7 +9,7 @@ use crate::{
     interpreter::{FL_T_Callable, InterpreterResult, FL_T},
 };
 
-use super::{eval_declaration, Callable_Native, FL_T_Callable_Body};
+use super::{Callable_Native, FL_T_Callable_Body};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Environment {
@@ -105,7 +105,7 @@ impl Interpreter {
 
     pub fn interpret_program(&mut self) -> InterpreterResult<()> {
         for declaration in self.source.iter() {
-            eval_declaration(declaration, self.global_env.clone())?;
+            self.eval_declaration(declaration, self.global_env.clone())?;
         }
 
         Ok(())

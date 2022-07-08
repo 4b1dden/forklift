@@ -71,6 +71,7 @@ fn run_repl_loop() {
     let mut line = String::new();
     let stdin = io::stdin();
     let parser = grammar::parse_program();
+    let interpreter = Interpreter::new(vec![]);
     let mut repl_env = Rc::new(RefCell::new(Environment::new(None)));
 
     loop {
@@ -80,7 +81,7 @@ fn run_repl_loop() {
 
         if line.trim().to_lowercase() != "exit" {
             let (rest, dec) = grammar::parse_declaration(&line).unwrap();
-            let evaled = interpreter::declaration::eval_declaration(&dec, repl_env.clone());
+            let evaled = interpreter.eval_declaration(&dec, repl_env.clone());
             println!("evaluated ---> {:#?} \n rest ---> {:#?}", evaled, rest);
         } else {
             break;
