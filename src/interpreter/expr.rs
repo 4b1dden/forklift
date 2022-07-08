@@ -225,12 +225,9 @@ impl Interpreter {
         env: Rc<RefCell<Environment>>,
     ) -> InterpreterResult<FL_T> {
         match expr {
-            LiteralExpr::Identifier(ident) => env
-                .deref()
-                .borrow()
-                .get(ident.0.clone())
-                .ok_or(format!("{} not found", ident.0))
-                .map(|x| x.deref().clone()),
+            LiteralExpr::Identifier(ident) => {
+                self.look_up_var(ident, env).map(|x| x.deref().clone()) // TODO: change
+            }
             LiteralExpr::NumberLiteral(Number::Integer32(num)) => {
                 Ok(FL_T::Primitive(FL_T_Primitive::Integer32(*num)))
             }
@@ -239,6 +236,36 @@ impl Interpreter {
             }
             LiteralExpr::StringLiteral(s) => Ok(FL_T::Primitive(FL_T_Primitive::Str(s.0.clone()))),
             LiteralExpr::Empty => todo!(),
+        }
+    }
+
+    pub fn look_up_var(
+        &self,
+        identifier: &Identifier,
+        env: Rc<RefCell<Environment>>,
+    ) -> InterpreterResult<Rc<FL_T>> {
+        let reconstructed_var_expr = Expr::Literal(LiteralExpr::Identifier(identifier.clone()));
+
+        let maybe_depth = self.locals.get(&reconstructed_var_expr);
+        /*
+        .ok_or(format!(
+            "{:?} was not found in local resolver map",
+            identifier.0.clone()
+        ))?;
+        */
+
+        if let Some(depth) = maybe_depth {
+            // var is local
+            Environment::get_at(env, &identifier.0, *depth)
+        } else {
+            // var is global
+            self.global_env
+                .borrow()
+                .get(identifier.0.clone())
+                .ok_or(format!(
+                    "{:#?} was thought to be a global but it is not there",
+                    identifier.0.clone()
+                ))
         }
     }
 }

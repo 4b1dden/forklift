@@ -35,6 +35,32 @@ impl Environment {
         }
     }
 
+    pub fn get_at(
+        env: Rc<RefCell<Environment>>,
+        key: &str,
+        depth: usize,
+    ) -> InterpreterResult<Rc<FL_T>> {
+        let mut curr_env = env.clone();
+        let mut i = 0;
+
+        while i < depth {
+            curr_env = curr_env
+                .clone()
+                .borrow()
+                .enclosing
+                .as_ref()
+                .ok_or(String::from("foo"))?
+                .clone();
+            i = i + 1;
+        }
+
+        if let Some(val) = curr_env.clone().borrow().get(key.to_string()) {
+            Ok(val)
+        } else {
+            Err(format!("{:#?} was not found", key))
+        }
+    }
+
     /// TODO: should this ever fail? maybe when we have consts
     pub fn put(&mut self, key: String, val: Rc<FL_T>) -> InterpreterResult<()> {
         self.bindings.insert(key, val);

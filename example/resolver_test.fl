@@ -8,6 +8,7 @@
             print foo;
             let bar = -foo;
             print hello_world;
+            print bar;
         }
     }
 }
