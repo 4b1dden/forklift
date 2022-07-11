@@ -226,6 +226,11 @@ impl Resolver {
             // return Err(String::from("Scopes empty"));
         }
 
+        let target_scope = self.scopes.last_mut().unwrap();
+        if target_scope.contains_key(&name.0) {
+            return Err(format!("Local binding with the given identifier {:#?} already exists. Use a reassignment (e.g. `foo = 1` instead of `let foo = 1`", name.0.clone()));
+        }
+
         self.scopes.last_mut().unwrap().insert(name.0, false);
 
         Ok(())

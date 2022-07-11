@@ -43,14 +43,21 @@ fn load_and_eval_file(path: &Path) {
 
     let dec_count = parsed_program.len();
     let mut interpreter = Interpreter::new(parsed_program.clone());
-    let mut resolver = Resolver::new(interpreter.clone());
+    let mut resolver = Resolver::new(interpreter);
 
-    resolver.resolve_program(parsed_program);
+    let resolved = resolver.resolve_program(parsed_program);
+
+    if let Err(resolution_err) = resolved {
+        println!("[FL]: ------ ERROR IN RESOLVER, EXITING");
+        println!("{:#?}", resolution_err);
+        exit(1);
+    }
+
     println!("[FL]: ------ FINISHED PROGRAM RESOLUTION");
     println!("{:#?}", &resolver.interpreter.locals);
 
     println!("[FL]: ------ PROGRAM EVALUATION START");
-    let executed_prog = interpreter.interpret_program();
+    let executed_prog = resolver.interpreter.interpret_program();
 
     println!("[FL]: ------ PROGRAM EVALUATION END");
 

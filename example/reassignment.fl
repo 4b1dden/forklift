@@ -9,3 +9,13 @@ let gl = "global";
 }
 gl = "global_changed";
 print gl;
+
+fun foo() {
+    print "foo1";
+}
+let a = foo();
+fun foo() {
+    print "foo2";
+}
+let f = 12;
+foo();

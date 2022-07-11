@@ -1,0 +1,4 @@
+{
+    let foo = 12;
+    let foo = 13;
+}
