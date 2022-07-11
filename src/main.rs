@@ -1,6 +1,8 @@
 use std::cell::RefCell;
 use std::env;
 use std::fs;
+use std::fs::File;
+use std::io::BufWriter;
 use std::io::{self, BufRead};
 use std::path::Path;
 use std::process::exit;
@@ -42,7 +44,10 @@ fn load_and_eval_file(path: &Path) {
     println!("{:#?}", parsed_program);
 
     let dec_count = parsed_program.len();
-    let mut interpreter = Interpreter::new(parsed_program.clone());
+    //let file_stream = File::create("foo.flout").expect("The file should exist");
+    let stdout_stream = io::stdout();
+    let mut interpreter = Interpreter::new(parsed_program.clone(), stdout_stream);
+
     let mut resolver = Resolver::new(interpreter);
 
     let resolved = resolver.resolve_program(parsed_program);
@@ -64,21 +69,13 @@ fn load_and_eval_file(path: &Path) {
     println!("[FL]: Successfully executed program!");
     println!("[FL]: {:#?}", executed_prog);
     println!("[FL]: Declarations: {:#?}", dec_count);
-    /*
-    println!(
-        "[FL]: Dump of global_env: {:?}",
-        &resolver.interpreter.global_env
-    );
-    */
-
-    // println!("{:#?}", parsed_program);
 }
 
 fn run_repl_loop() {
     let mut line = String::new();
     let stdin = io::stdin();
     let parser = grammar::parse_program();
-    let interpreter = Interpreter::new(vec![]);
+    let interpreter = Interpreter::new(vec![], io::stdout());
     let mut repl_env = Rc::new(RefCell::new(Environment::new(None)));
 
     loop {

@@ -1,6 +1,7 @@
 use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::io::Write;
 use std::rc::Rc;
 
 use crate::parser::{Expr, Identifier};
@@ -92,18 +93,20 @@ impl Environment {
 }
 
 #[derive(Debug, Clone)]
-pub struct Interpreter {
+pub struct Interpreter<W: Write> {
     pub source: Program,
     pub global_env: Rc<RefCell<Environment>>,
     pub locals: HashMap<Expr, usize>, // depth
+    pub writer: Rc<RefCell<W>>,
 }
 
-impl Interpreter {
-    pub fn new(source: Program) -> Self {
+impl<W: Write> Interpreter<W> {
+    pub fn new(source: Program, writer: W) -> Self {
         let mut me = Self {
             source,
             global_env: Rc::new(RefCell::new(Environment::new(None))),
             locals: HashMap::new(),
+            writer: Rc::new(RefCell::new(writer)),
         };
 
         me.load_defaults();
@@ -148,7 +151,7 @@ impl Interpreter {
     }
 
     pub fn inject_into_global_env(
-        &mut self,
+        &self,
         key: String,
         val: Rc<FL_T>,
     ) -> InterpreterResult<Rc<FL_T>> {

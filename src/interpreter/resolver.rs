@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, io::Write};
 
 use crate::{
     grammar::{Declaration, Program, Statement},
@@ -7,13 +7,13 @@ use crate::{
 };
 
 #[derive(Debug)]
-pub struct Resolver {
+pub struct Resolver<W: Write> {
     pub scopes: Vec<HashMap<String, bool>>,
-    pub interpreter: Interpreter,
+    pub interpreter: Interpreter<W>,
 }
 
-impl Resolver {
-    pub fn new(interpreter: Interpreter) -> Self {
+impl<W: Write> Resolver<W> {
+    pub fn new(interpreter: Interpreter<W>) -> Self {
         Self {
             scopes: vec![],
             interpreter,

@@ -2,6 +2,7 @@ use std::borrow::BorrowMut;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt::Display;
+use std::io::Write;
 use std::ops::{Add, Deref, Div, Mul, Sub};
 use std::rc::{Rc, Weak};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -17,7 +18,7 @@ use crate::parser::{
 
 use super::{Interpreter, InterpreterResult};
 
-impl Interpreter {
+impl<W: Write> Interpreter<W> {
     pub fn evaluate_expr(
         &self,
         expr: &Expr,
@@ -39,7 +40,9 @@ impl Interpreter {
     ) -> InterpreterResult<FL_T> {
         let evaluated = self.evaluate_expr(expr, env)?;
 
-        println!("{}", evaluated);
+        RefCell::borrow_mut(&self.writer)
+            .write(evaluated.to_string().as_bytes())
+            .map_err(|e| format!("Writer error: {:#?}", e))?;
 
         Ok(evaluated)
     }

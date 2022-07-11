@@ -1,5 +1,6 @@
 use std::borrow::BorrowMut;
 use std::cell::{RefCell, RefMut};
+use std::io::Write;
 use std::rc::Rc;
 
 use crate::grammar::{Declaration, Statement};
@@ -11,7 +12,7 @@ use super::{desugar_for_loop_to_while_block, Interpreter};
 // TODO: change, this is for early dev purposes only
 pub type InterpreterResult<T> = Result<T, String>;
 
-impl Interpreter {
+impl<W: Write> Interpreter<W> {
     pub fn eval_declaration(
         &self,
         decl: &Declaration,

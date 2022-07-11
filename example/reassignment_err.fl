@@ -1,4 +1,5 @@
 {
     let foo = 12;
-    let foo = 13;
+    foo = 14;
+    print foo;
 }

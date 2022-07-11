@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::io::{self, Write};
 use std::rc::Rc;
 
 use super::{desugar_for_loop_to_while_block, FL_T_Primitive, FL_T};
@@ -13,18 +14,25 @@ fn empty_env() -> Rc<RefCell<Environment>> {
     Rc::new(RefCell::new(Environment::new(None)))
 }
 
-fn interpreter() -> Interpreter {
-    Interpreter::new(vec![])
+/*
+fn interpreter<W>() -> Interpreter<W>
+where
+    W: Write,
+{
+    let io = io::stdout();
+    let f = Interpreter::new(vec![], io);
+
+    f
 }
+*/
 
 #[test]
 fn test_literal_expr() {
     let to_intepret = Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(3)));
+    let interpreter = Interpreter::new(vec![], io::stdout());
 
     assert_eq!(
-        interpreter()
-            .interpreter()
-            .evaluate_expr(&to_intepret, empty_env()),
+        interpreter.evaluate_expr(&to_intepret, empty_env()),
         Ok(FL_T::Primitive(FL_T_Primitive::Integer32(3)))
     );
 }
