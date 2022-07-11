@@ -35,11 +35,10 @@ impl Environment {
         }
     }
 
-    pub fn get_at(
+    fn ancestor(
         env: Rc<RefCell<Environment>>,
-        key: &str,
         depth: usize,
-    ) -> InterpreterResult<Rc<FL_T>> {
+    ) -> InterpreterResult<Rc<RefCell<Environment>>> {
         let mut curr_env = env.clone();
         let mut i = 0;
 
@@ -54,18 +53,41 @@ impl Environment {
             i = i + 1;
         }
 
-        if let Some(val) = curr_env.clone().borrow().get(key.to_string()) {
+        Ok(curr_env.clone())
+    }
+
+    pub fn get_at(
+        env: Rc<RefCell<Environment>>,
+        key: &str,
+        depth: usize,
+    ) -> InterpreterResult<Rc<FL_T>> {
+        let relevant_ancestor = Environment::ancestor(env, depth)?;
+
+        if let Some(val) = relevant_ancestor.clone().borrow().get(key.to_string()) {
             Ok(val)
         } else {
             Err(format!("{:#?} was not found", key))
         }
     }
 
-    /// TODO: should this ever fail? maybe when we have consts
-    pub fn put(&mut self, key: String, val: Rc<FL_T>) -> InterpreterResult<()> {
-        self.bindings.insert(key, val);
+    pub fn put_at(
+        env: Rc<RefCell<Environment>>,
+        key: String,
+        val: Rc<FL_T>,
+        depth: usize,
+    ) -> InterpreterResult<Rc<FL_T>> {
+        let relevant_ancestor = Environment::ancestor(env, depth)?;
 
-        Ok(())
+        RefCell::borrow_mut(&relevant_ancestor).put(key, val.clone());
+
+        Ok(val)
+    }
+
+    /// TODO: should this ever fail? maybe when we have consts
+    pub fn put(&mut self, key: String, val: Rc<FL_T>) -> InterpreterResult<Rc<FL_T>> {
+        self.bindings.insert(key, val.clone());
+
+        Ok(val)
     }
 }
 
@@ -125,7 +147,11 @@ impl Interpreter {
         Ok(())
     }
 
-    pub fn inject_into_global_env(&mut self, key: String, val: Rc<FL_T>) -> InterpreterResult<()> {
+    pub fn inject_into_global_env(
+        &mut self,
+        key: String,
+        val: Rc<FL_T>,
+    ) -> InterpreterResult<Rc<FL_T>> {
         RefCell::borrow_mut(&self.global_env).put(key, val)
     }
 

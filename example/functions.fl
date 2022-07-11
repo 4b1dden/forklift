@@ -7,4 +7,6 @@ fun get_1() {
 }
 let one = get_1();
 print one;
+let gl = "foo";
 let bb = greet("kiko", "123");
+print gl;

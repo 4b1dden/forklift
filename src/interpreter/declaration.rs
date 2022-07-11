@@ -4,7 +4,7 @@ use std::rc::Rc;
 
 use crate::grammar::{Declaration, Statement};
 use crate::interpreter::{Environment, FL_T};
-use crate::parser::{LetBinding, Reassignment};
+use crate::parser::{ensure_is_identifier, Expr, LetBinding, LiteralExpr, Reassignment};
 
 use super::{desugar_for_loop_to_while_block, Interpreter};
 
@@ -16,13 +16,16 @@ impl Interpreter {
         &self,
         decl: &Declaration,
         env: Rc<RefCell<Environment>>,
-    ) -> InterpreterResult<FL_T> {
+    ) -> InterpreterResult<Rc<FL_T>> {
         match decl {
             Declaration::Let(let_binding) => self.evaluate_let_binding(let_binding, env),
             Declaration::Reassignment(reassignment) => {
                 self.evaluate_reassignment(reassignment, env)
             }
-            Declaration::Statement(statement) => self.evaluate_statement(statement, env),
+            Declaration::Statement(statement) => {
+                // TODO: unify so we dont need to wrap in Rc here
+                self.evaluate_statement(statement, env).map(Rc::new)
+            }
         }
     }
 
@@ -56,12 +59,24 @@ impl Interpreter {
         &self,
         binding: &LetBinding,
         env: Rc<RefCell<Environment>>,
-    ) -> InterpreterResult<FL_T> {
+    ) -> InterpreterResult<Rc<FL_T>> {
+        let reconstructed = Expr::Literal(LiteralExpr::Identifier(binding.identifier.clone()));
+        let maybe_depth = self.locals.get(&reconstructed);
         let rhs_evaluated = self.evaluate_expr(&binding.rhs, env.clone())?;
 
-        RefCell::borrow_mut(&env).put(binding.identifier.0.clone(), Rc::new(rhs_evaluated.clone()));
-
-        Ok(rhs_evaluated)
+        if let Some(depth) = maybe_depth {
+            // var is local
+            Environment::put_at(
+                env,
+                binding.identifier.0.clone(),
+                Rc::new(rhs_evaluated),
+                *depth,
+            )
+        } else {
+            // var is global
+            RefCell::borrow_mut(&self.global_env)
+                .put(binding.identifier.0.clone(), Rc::new(rhs_evaluated))
+        }
     }
 
     /// TODO: We need to either get a mutable reference to the enclosing environment
@@ -72,12 +87,18 @@ impl Interpreter {
         &self,
         reassignment: &Reassignment,
         env: Rc<RefCell<Environment>>,
-    ) -> InterpreterResult<FL_T> {
-        let new_val = self.evaluate_expr(&reassignment.rhs, env.clone())?;
+    ) -> InterpreterResult<Rc<FL_T>> {
+        let reconstructed = Expr::Literal(LiteralExpr::Identifier(reassignment.identifier.clone()));
+        let maybe_depth = self.locals.get(&reconstructed);
+        let rhs_evaluated = self.evaluate_expr(&reassignment.rhs, env.clone())?;
+        let rhs_rc = Rc::new(rhs_evaluated);
 
-        RefCell::borrow_mut(&env)
-            .put(reassignment.identifier.0.clone(), Rc::new(new_val.clone()))?;
-
-        Ok(new_val)
+        if let Some(depth) = maybe_depth {
+            // reassignment of a local var
+            Environment::put_at(env, reassignment.identifier.0.clone(), rhs_rc, *depth)
+        } else {
+            // reassignment of a global var
+            RefCell::borrow_mut(&self.global_env).put(reassignment.identifier.0.clone(), rhs_rc)
+        }
     }
 }

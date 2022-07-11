@@ -54,7 +54,10 @@ impl Interpreter {
 
         let mut last_result = FL_T::Unit;
         for declaration in declarations.iter() {
-            last_result = self.eval_declaration(declaration, env.clone())?;
+            let rc_fl_t = self.eval_declaration(declaration, env.clone())?;
+
+            // TODO: this deref is bad, i need to unify
+            last_result = rc_fl_t.deref().clone();
         }
 
         return Ok(last_result);

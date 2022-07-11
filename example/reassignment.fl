@@ -1,0 +1,11 @@
+let gl = "global";
+{
+    let loc = "local";
+    print gl;
+    print loc;
+
+    loc = "local_changed";
+    print loc;
+}
+gl = "global_changed";
+print gl;

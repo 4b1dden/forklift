@@ -73,6 +73,7 @@ impl Resolver {
                 }
             }
             Statement::WhileLoop(while_loop) => {
+                println!("resolving while loop");
                 self.resolve_expr(&while_loop.condition)?;
 
                 self.resolve_statement(while_loop.body)
@@ -180,6 +181,15 @@ impl Resolver {
 
     fn resolve_local(&mut self, expr: &Expr, identifier: &Identifier) -> InterpreterResult<()> {
         let scope_size = self.scopes.len();
+        if scope_size == 0 {
+            // is a global var def
+            println!("{:#?}", &self.scopes);
+            println!(
+                "scope size 0 when resolving local {:#?} {:#?}",
+                expr, identifier
+            );
+            return Ok(());
+        }
         let mut i = scope_size - 1;
 
         while i >= 0 {
@@ -193,8 +203,13 @@ impl Resolver {
 
                 return Ok(());
             }
+            println!("i = {:#}", i);
 
-            i = i - 1;
+            if i != 0 {
+                i = i - 1; // prevent underflow
+            } else {
+                break;
+            }
         }
 
         Ok(())
