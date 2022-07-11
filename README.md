@@ -3,7 +3,7 @@
 my language. not sure what this will yet be, but I always wanted to build a dummy lang from scratch. so far i have no dependencies. 
 
 things to fix {bad}: 
-- [] evaluate fn calls as exprs on separate lines (this is really not as easy as it seems due to stack overflow errors :>)
+- [] singular fn calls cause problems to the parser (wish rust had TCO) 
 - [] empty strings (" ") break the parser? lol
 
 todo:
@@ -34,7 +34,8 @@ todo:
     - [] floats
     - [] functions
 - [] better testing
-    - [] simple programs e2e
+    - [] simple programs e2e test stdout 
+    - [] add out stream type for interpreter 
 - [] types? 
 - [] ... ?
 
