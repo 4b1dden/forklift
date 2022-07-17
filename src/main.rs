@@ -41,12 +41,18 @@ fn load_and_eval_file(path: &Path) {
     let program_parser = grammar::parse_program();
     let (rest, parsed_program) = program_parser.parse(&contents).unwrap();
 
+    if rest != "" {
+        println!("[FL]: ------ ERROR IN PARSER, EXITING");
+        println!("rest: {:#?}", rest);
+        exit(1);
+    }
+
     println!("{:#?}", parsed_program);
 
     let dec_count = parsed_program.len();
     //let file_stream = File::create("foo.flout").expect("The file should exist");
     let stdout_stream = io::stdout();
-    let mut interpreter = Interpreter::new(parsed_program.clone(), stdout_stream);
+    let interpreter = Interpreter::new(parsed_program.clone(), stdout_stream);
 
     let mut resolver = Resolver::new(interpreter);
 

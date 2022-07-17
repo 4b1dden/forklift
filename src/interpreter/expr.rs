@@ -73,7 +73,7 @@ impl<W: Write> Interpreter<W> {
     ) -> InterpreterResult<FL_T> {
         let determinant = self.evaluate_expr(&if_block.cond, env.clone())?;
         let if_clause_condition = cast_to_bool(&determinant);
-        let mut local_env = Rc::new(RefCell::new(Environment::new(Some(env.clone()))));
+        let local_env = Rc::new(RefCell::new(Environment::new(Some(env.clone()))));
 
         let mut last_result = FL_T::Unit;
         if if_clause_condition {
