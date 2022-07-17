@@ -3,6 +3,7 @@ fun greet(first, last) {
     print s;
 }
 fun get_1() {
+    print "Hello from get_1";
     return 1;
 }
 let one = get_1();

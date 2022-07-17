@@ -40,8 +40,10 @@ impl<W: Write> Interpreter<W> {
     ) -> InterpreterResult<FL_T> {
         let evaluated = self.evaluate_expr(expr, env)?;
 
+        let to_write = evaluated.to_string() + "\n";
+
         RefCell::borrow_mut(&self.writer)
-            .write(evaluated.to_string().as_bytes())
+            .write(to_write.as_bytes())
             .map_err(|e| format!("Writer error: {:#?}", e))?;
 
         Ok(evaluated)

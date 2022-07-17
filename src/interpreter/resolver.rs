@@ -127,20 +127,25 @@ impl<W: Write> Resolver<W> {
     }
 
     fn resolve_identifier(&mut self, identifier: &Identifier) -> InterpreterResult<()> {
+        /*
         if self.scopes.is_empty() {
             return Err(format!(
                 "Can not resolve {:#} within empty scopes",
                 identifier.0
             ));
         }
+        */
 
         // does this even work?
-        if let Some(decl) = self.scopes.last().unwrap().get(&identifier.0) {
-            if *decl == false {
-                return Err(format!(
-                    "Can not reference variable {:#} in it's own declaration",
-                    identifier.0.clone()
-                ));
+        let maybe_last = self.scopes.last();
+        if let Some(last) = maybe_last {
+            if let Some(decl) = last.get(&identifier.0) {
+                if *decl == false && !self.scopes.is_empty() {
+                    return Err(format!(
+                        "Can not reference variable {:#} in it's own declaration",
+                        identifier.0.clone()
+                    ));
+                }
             }
         }
 
