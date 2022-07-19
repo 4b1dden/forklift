@@ -1,0 +1,7 @@
+let a = 12;
+let b = 13;
+let c = "foo";
+
+print a;
+print b;
+print c;

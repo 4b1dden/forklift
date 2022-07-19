@@ -14,18 +14,6 @@ fn empty_env() -> Rc<RefCell<Environment>> {
     Rc::new(RefCell::new(Environment::new(None)))
 }
 
-/*
-fn interpreter<W>() -> Interpreter<W>
-where
-    W: Write,
-{
-    let io = io::stdout();
-    let f = Interpreter::new(vec![], io);
-
-    f
-}
-*/
-
 #[test]
 fn test_literal_expr() {
     let to_intepret = Expr::Literal(LiteralExpr::NumberLiteral(Number::Integer32(3)));
@@ -39,6 +27,8 @@ fn test_literal_expr() {
 
 #[test]
 fn test_unary_expr() {
+    let interpreter = Interpreter::new(vec![], io::stdout());
+
     let inner = Expr::Unary(UnaryExpr {
         op: UnaryOperator::Minus,
         expr: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
@@ -53,18 +43,20 @@ fn test_unary_expr() {
     });
 
     assert_eq!(
-        interpreter().evaluate_expr(&to_intepret, empty_env()),
+        interpreter.evaluate_expr(&to_intepret, empty_env()),
         Ok(FL_T::Primitive(FL_T_Primitive::Integer32(-5)))
     );
 
     assert_eq!(
-        interpreter().evaluate_expr(&nested, empty_env()),
+        interpreter.evaluate_expr(&nested, empty_env()),
         Ok(FL_T::Primitive(FL_T_Primitive::Integer32(5)))
     );
 }
 
 #[test]
 fn test_binary_expr() {
+    let interpreter = Interpreter::new(vec![], io::stdout());
+
     // TODO: extend test cases
     let inner = Expr::Binary(BinaryExpr {
         lhs: Box::new(Expr::Literal(LiteralExpr::NumberLiteral(
@@ -85,12 +77,12 @@ fn test_binary_expr() {
     });
 
     assert_eq!(
-        interpreter().evaluate_expr(&inner, empty_env()),
+        interpreter.evaluate_expr(&inner, empty_env()),
         Ok(FL_T::Primitive(FL_T_Primitive::Integer32(50)))
     );
 
     assert_eq!(
-        interpreter().evaluate_expr(&nested, empty_env()),
+        interpreter.evaluate_expr(&nested, empty_env()),
         Ok(FL_T::Primitive(FL_T_Primitive::Integer32(53)))
     );
 }

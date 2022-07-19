@@ -12,6 +12,10 @@ mod grammar;
 mod interpreter;
 mod parser;
 
+#[cfg(test)]
+#[path = "../test/mod.rs"]
+mod e2e_tests;
+
 use crate::grammar::parse_declaration;
 use crate::interpreter::{resolver::Resolver, Environment, Interpreter};
 use crate::parser::{BoxedParser, Expr, Parser};

@@ -1,0 +1,3 @@
+print "foo";
+print 12;
+print 12.34;
