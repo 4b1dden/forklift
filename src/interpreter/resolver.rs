@@ -36,7 +36,7 @@ impl<W: Write> Resolver<W> {
     }
 
     fn begin_scope(&mut self) {
-        println!("pushing new scope");
+        //println!("pushing new scope");
         self.scopes.push(HashMap::new())
     }
 
@@ -95,7 +95,7 @@ impl<W: Write> Resolver<W> {
     }
 
     pub fn resolve_expr(&mut self, expr: &Expr) -> InterpreterResult<()> {
-        println!("resolving {:#?}, self.scopes: {:#?}", expr, &self.scopes);
+        // println!("resolving {:#?}, self.scopes: {:#?}", expr, &self.scopes);
         match expr {
             Expr::Literal(literal_expr) => self.resolve_literal_expr(literal_expr),
             Expr::Unary(unary_expr) => self.resolve_expr(&*unary_expr.expr),
@@ -188,11 +188,11 @@ impl<W: Write> Resolver<W> {
         let scope_size = self.scopes.len();
         if scope_size == 0 {
             // is a global var def
-            println!("{:#?}", &self.scopes);
-            println!(
-                "scope size 0 when resolving local {:#?} {:#?}",
-                expr, identifier
-            );
+            //println!("{:#?}", &self.scopes);
+            //println!(
+            //    "scope size 0 when resolving local {:#?} {:#?}",
+            //    expr, identifier
+            //);
             return Ok(());
         }
         let mut i = scope_size - 1;

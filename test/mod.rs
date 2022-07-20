@@ -78,6 +78,11 @@ fn test_variables() {
     run_stdout_test_case("variables")
 }
 
+#[test]
+fn test_if_else() {
+    run_stdout_test_case("if_else")
+}
+
 /*
 impl Write for StringBuffer {
 fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
