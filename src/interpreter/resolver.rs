@@ -9,6 +9,7 @@ use crate::{
 #[derive(Debug)]
 pub struct Resolver<W: Write> {
     pub scopes: Vec<HashMap<String, bool>>,
+    // this is not good, intepreter should be ideally handled differently
     pub interpreter: Interpreter<W>,
 }
 
