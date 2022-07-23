@@ -97,6 +97,7 @@ pub fn parse_declaration_without_trailing_semicolon<'a>(
 }
 
 pub type Program = Vec<Declaration>;
+
 pub fn wrapped_scope<'a, P, R>(inside: P) -> impl Parser<'a, R>
 where
     P: Parser<'a, R> + 'a,

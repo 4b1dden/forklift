@@ -74,7 +74,6 @@ impl<W: Write> Resolver<W> {
                 }
             }
             Statement::WhileLoop(while_loop) => {
-                println!("resolving while loop");
                 self.resolve_expr(&while_loop.condition)?;
 
                 self.resolve_statement(while_loop.body)
@@ -128,15 +127,6 @@ impl<W: Write> Resolver<W> {
     }
 
     fn resolve_identifier(&mut self, identifier: &Identifier) -> InterpreterResult<()> {
-        /*
-        if self.scopes.is_empty() {
-            return Err(format!(
-                "Can not resolve {:#} within empty scopes",
-                identifier.0
-            ));
-        }
-        */
-
         // does this even work?
         let maybe_last = self.scopes.last();
         if let Some(last) = maybe_last {
@@ -201,15 +191,17 @@ impl<W: Write> Resolver<W> {
         while i >= 0 {
             // do
             if self.scopes.get(i).unwrap().get(&identifier.0).is_some() {
+                /*
                 println!(
                     "Found {:?} in {:?} scope, scope_size = {:?}",
                     &identifier.0, i, scope_size
                 );
+                */
                 self.resolve_for_interpreter(expr, scope_size - 1 - i);
 
                 return Ok(());
             }
-            println!("i = {:#}", i);
+            // println!("i = {:#}", i);
 
             if i != 0 {
                 i = i - 1; // prevent underflow
@@ -222,7 +214,7 @@ impl<W: Write> Resolver<W> {
     }
 
     fn resolve_for_interpreter(&mut self, expr: &Expr, depth: usize) {
-        println!("depth: {:?}", depth);
+        // println!("depth: {:?}", depth);
         self.interpreter.resolve(expr.clone(), depth)
     }
 

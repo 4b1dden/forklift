@@ -62,22 +62,32 @@ impl<W: Write> Interpreter<W> {
         env: Rc<RefCell<Environment>>,
     ) -> InterpreterResult<Rc<FL_T>> {
         let reconstructed = Expr::Literal(LiteralExpr::Identifier(binding.identifier.clone()));
-        let maybe_depth = self.locals.get(&reconstructed);
+        // let maybe_depth = self.locals.get(&reconstructed);
         let rhs_evaluated = self.evaluate_expr(&binding.rhs, env.clone())?;
 
-        if let Some(depth) = maybe_depth {
-            // var is local
-            Environment::put_at(
-                env,
-                binding.identifier.0.clone(),
-                Rc::new(rhs_evaluated),
-                *depth,
-            )
-        } else {
-            // var is global
-            RefCell::borrow_mut(&self.global_env)
-                .put(binding.identifier.0.clone(), Rc::new(rhs_evaluated))
-        }
+        RefCell::borrow_mut(&env).put(binding.identifier.0.clone(), Rc::new(rhs_evaluated))
+        // println!(
+        //     "_locals: {:#?}, depth: {:?}, curr_env: {:?}",
+        //     &self.locals,
+        //     maybe_depth,
+        //     env.clone()
+        // );
+        // println!("hello2");
+        // if let Some(depth) = maybe_depth {
+        //     // var is local
+        //     let res = Environment::put_at(
+        //         env,
+        //         binding.identifier.0.clone(),
+        //         Rc::new(rhs_evaluated),
+        //         *depth,
+        //     );
+        //     println!("result of let eval is: {:#?}", &res);
+        //     res
+        // } else {
+        //     // var is global
+        //     RefCell::borrow_mut(&self.global_env)
+        //         .put(binding.identifier.0.clone(), Rc::new(rhs_evaluated))
+        // }
     }
 
     /// TODO: We need to either get a mutable reference to the enclosing environment
@@ -92,8 +102,12 @@ impl<W: Write> Interpreter<W> {
         let reconstructed = Expr::Literal(LiteralExpr::Identifier(reassignment.identifier.clone()));
         let maybe_depth = self.locals.get(&reconstructed);
         let rhs_evaluated = self.evaluate_expr(&reassignment.rhs, env.clone())?;
-        let rhs_rc = Rc::new(rhs_evaluated);
+        let rhs_rc = Rc::new(rhs_evaluated.clone());
 
+        // println!(
+        //     " reeee: {:#?}, rhs evaluated: {:#?}, depth: {:#?}, env: {:#?}",
+        //     reassignment, &rhs_evaluated, &maybe_depth, &env
+        // );
         if let Some(depth) = maybe_depth {
             // reassignment of a local var
             Environment::put_at(env, reassignment.identifier.0.clone(), rhs_rc, *depth)

@@ -1,5 +1,5 @@
 use std::borrow::BorrowMut;
-use std::cell::RefCell;
+use std::cell::{RefCell, Ref};
 use std::collections::HashMap;
 use std::io::Write;
 use std::rc::Rc;
@@ -49,7 +49,7 @@ impl Environment {
                 .borrow()
                 .enclosing
                 .as_ref()
-                .ok_or(String::from("foo"))?
+                .ok_or(String::from("max ancestor depth exceeded"))?
                 .clone();
             i = i + 1;
         }
@@ -62,12 +62,23 @@ impl Environment {
         key: &str,
         depth: usize,
     ) -> InterpreterResult<Rc<FL_T>> {
-        let relevant_ancestor = Environment::ancestor(env, depth)?;
+        println!("get:  {:#} depth: {:#}", key, depth);
+        let maybe_relevant_ancestor = Environment::ancestor(env.clone(), depth);
 
-        if let Some(val) = relevant_ancestor.clone().borrow().get(key.to_string()) {
-            Ok(val)
-        } else {
-            Err(format!("{:#?} was not found", key))
+        match maybe_relevant_ancestor {
+            Ok(relevant_ancestor) => {
+                println!("relevant ancestor: {:#?}", relevant_ancestor.clone());
+                if let Some(val) = relevant_ancestor.clone().borrow().get(key.to_string()) {
+                    Ok(val)
+                } else {
+                    Err(format!("{:#?} was not found", key))
+                }
+            }
+            Err(e) => {
+                println!("not found! {:#?}", &env);
+
+                Err(String::from("foooBAr!"))
+            }
         }
     }
 
@@ -77,11 +88,20 @@ impl Environment {
         val: Rc<FL_T>,
         depth: usize,
     ) -> InterpreterResult<Rc<FL_T>> {
-        let relevant_ancestor = Environment::ancestor(env, depth)?;
+        let maybe_relevant_ancestor = Environment::ancestor(env.clone(), depth);
 
-        RefCell::borrow_mut(&relevant_ancestor).put(key, val.clone());
+        match maybe_relevant_ancestor {
+            Ok(relevant_ancestor) => {
+                RefCell::borrow_mut(&relevant_ancestor).put(key, val.clone());
 
-        Ok(val)
+                Ok(val)
+            }
+            Err(e) => {
+                println!("not found put {:#?}", &env);
+
+                Err(String::from("foo bar baz !"))
+            }
+        }
     }
 
     /// TODO: should this ever fail? maybe when we have consts
@@ -97,16 +117,19 @@ pub struct Interpreter<W: Write> {
     pub source: Program,
     pub global_env: Rc<RefCell<Environment>>,
     pub locals: HashMap<Expr, usize>, // depth
+    pub environment: Rc<RefCell<Environment>>,
     pub writer: Rc<RefCell<W>>,
 }
 
 impl<W: Write> Interpreter<W> {
     pub fn new(source: Program, writer: W) -> Self {
+        let globals = Rc::new(RefCell::new(Environment::new(None)));
         let mut me = Self {
             source,
-            global_env: Rc::new(RefCell::new(Environment::new(None))),
+            global_env: globals.clone(),
             locals: HashMap::new(),
             writer: Rc::new(RefCell::new(writer)),
+            environment: globals
         };
 
         me.load_defaults();
@@ -116,10 +139,10 @@ impl<W: Write> Interpreter<W> {
 
     pub fn resolve(&mut self, expr: Expr, depth: usize) {
         self.locals.insert(expr, depth);
-        println!(
-            "inserted into interpreter locals, locals: {:#?}",
-            &self.locals
-        );
+        // println!(
+        //     "inserted into interpreter locals, locals: {:#?}",
+        //     &self.locals
+        // );
     }
 
     pub fn load_defaults(&mut self) -> InterpreterResult<()> {

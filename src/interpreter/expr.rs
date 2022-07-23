@@ -55,11 +55,12 @@ impl<W: Write> Interpreter<W> {
         env: Rc<RefCell<Environment>>,
     ) -> InterpreterResult<FL_T> {
         let local_env = Rc::new(RefCell::new(Environment::new(Some(env.clone()))));
-        RefCell::borrow_mut(&local_env).bindings = env.borrow().bindings.clone();
+        // println!("local env in eval block {:#?}", local_env.clone());
+        //RefCell::borrow_mut(&local_env).bindings = env.borrow().bindings.clone();
 
         let mut last_result = FL_T::Unit;
         for declaration in declarations.iter() {
-            let rc_fl_t = self.eval_declaration(declaration, env.clone())?;
+            let rc_fl_t = self.eval_declaration(declaration, local_env.clone())?;
 
             // TODO: this deref is bad, i need to unify
             last_result = rc_fl_t.deref().clone();
@@ -96,14 +97,17 @@ impl<W: Write> Interpreter<W> {
         let mut determinant;
         let mut determinant_as_bool;
         let mut last_result: InterpreterResult<FL_T> = Ok(FL_T::Unit);
-        let mut local_env = Environment::new(Some(env.clone()));
+        let mut local_env = Rc::new(RefCell::new(Environment::new(Some(env.clone()))));
+
+        // println!("while loop intro local env: {:#?}", &local_env);
 
         loop {
-            determinant = self.evaluate_expr(&while_loop.condition, env.clone())?;
+            determinant = self.evaluate_expr(&while_loop.condition, local_env.clone())?;
+            // println!("determinant evaluated to: {:#?}", &determinant);
             determinant_as_bool = cast_to_bool(&determinant);
 
             if determinant_as_bool {
-                last_result = self.evaluate_statement(&while_loop.body, env.clone());
+                last_result = self.evaluate_statement(&while_loop.body, local_env.clone());
             } else {
                 break; // while loop cond is no longer true
             }
@@ -162,6 +166,7 @@ impl<W: Write> Interpreter<W> {
         let right = self.evaluate_expr(&expr.rhs, env.clone())?;
         let op = &expr.op;
 
+        // println!("bin op left {:#} right {:#} op {:#?}", &left, &right, op);
         apply_bin_op_to_bin_expr(left, op, right)
     }
 
@@ -264,7 +269,17 @@ impl<W: Write> Interpreter<W> {
 
         if let Some(depth) = maybe_depth {
             // var is local
-            Environment::get_at(env, &identifier.0, *depth)
+            //
+            // Environment::get_at(env, &identifier.0, *depth)
+            // depth is a bit broken now
+            // if you use the version with get_at, while loops will most likely break
+            // this is an issue with variable resolution & scoping mismatch
+            // while (PRED) BLOCK ---->
+            // PRED gets evaluated with an off by one error when doing ancestry with respect to
+            // BLOCK
+            env.borrow()
+                .get(identifier.0.clone())
+                .ok_or(String::from("var not found !"))
         } else {
             // var is global
             self.global_env

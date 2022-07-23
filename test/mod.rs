@@ -2,6 +2,7 @@ use std::fs::{self, File};
 
 use crate::grammar;
 use crate::interpreter::{Interpreter, Resolver};
+use crate::optimizer;
 use crate::parser::Parser;
 
 // maybe should use builtin Path, this will do for the mvp for now
@@ -22,6 +23,8 @@ fn run_stdout_test_case(source_file_name: &str) {
         .parse(&source)
         .expect("Could not successfully finish parsing");
 
+    let optimized_program = optimizer::optimize_program(parsed_program);
+
     if rest != "" {
         panic!(
             "Although parser did not throw an error, it did not parse the entire file. Quitting"
@@ -36,11 +39,11 @@ fn run_stdout_test_case(source_file_name: &str) {
 
     let output_file_stream = File::create(with_folder(&(source_file_name.to_string() + ".temp")))
         .expect("Can not create a new file");
-    let interpreter = Interpreter::new(parsed_program.clone(), output_file_stream);
+    let interpreter = Interpreter::new(optimized_program.clone(), output_file_stream);
 
     let mut resolver = Resolver::new(interpreter);
     resolver
-        .resolve_program(parsed_program)
+        .resolve_program(optimized_program)
         .expect("An error during resolution");
 
     let interpreter_result = resolver.interpreter.interpret_program();
@@ -83,6 +86,20 @@ fn test_if_else() {
     run_stdout_test_case("if_else")
 }
 
+#[test]
+fn test_while_loop() {
+    run_stdout_test_case("while_loop")
+}
+
+#[test]
+fn test_for_while_desugar() {
+    run_stdout_test_case("for_loop") // desugaring into while loop block
+}
+
+#[test]
+fn test_logical_comparison_arithmetic() {
+    run_stdout_test_case("logical_comparison_arithmetic")
+}
 /*
 impl Write for StringBuffer {
 fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {

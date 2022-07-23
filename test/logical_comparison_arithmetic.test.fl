@@ -1,0 +1,21 @@
+let a = -((2 == 2) > 0);
+let b = -1 * a;
+print b;
+
+
+let l = 10;
+let r = 20;
+let multiplier = 3;
+
+
+if ((2*l) > 20) { 
+    print "Yes";
+} else {
+    print "No";
+}
+
+
+let f = (l == r) * multiplier;
+if (f == 0) {
+    print "f is 0";
+}
