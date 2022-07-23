@@ -5,6 +5,7 @@ my language. not sure what this will yet be, but I always wanted to build a dumm
 things to fix {bad}: 
 - [] singular fn calls cause problems to the parser (wish rust had TCO) 
 - [] empty strings (" ") break the parser? lol
+- [] resolver is written, however, there's an offby1 error with while loops in blocks... for now, i reuse the naive parental environment lookup
 
 todo:
 - [x] lexer (ended up not using this)
