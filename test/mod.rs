@@ -100,9 +100,13 @@ fn test_for_while_desugar() {
 fn test_logical_comparison_arithmetic() {
     run_stdout_test_case("logical_comparison_arithmetic")
 }
-/*
-impl Write for StringBuffer {
-fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
 
-}}
-*/
+#[test]
+fn test_fibonacci() {
+    run_stdout_test_case("fibonacci")
+}
+
+#[test]
+fn test_functions() {
+    run_stdout_test_case("functions")
+}

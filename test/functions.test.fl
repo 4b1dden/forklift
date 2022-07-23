@@ -1,0 +1,16 @@
+fun get_1() {
+    return 1;
+}
+
+fun get_sum(a, b) {
+    return a + b;
+}
+
+let a = get_1();
+print a;
+
+let b = get_1() + 1;
+print b;
+
+let sum = get_sum(a, b);
+print sum;
