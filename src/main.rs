@@ -12,6 +12,7 @@ mod grammar;
 mod interpreter;
 mod optimizer;
 mod parser;
+mod vm;
 
 #[cfg(test)]
 #[path = "../test/mod.rs"]
@@ -34,6 +35,8 @@ fn main() {
     } else if mode == "load" {
         let filepath = Path::new(&args[2]);
         load_and_eval_file(filepath);
+    } else if mode == "vm" {
+        vm::main();
     } else {
         println!("Unknown mode {:#}, use repl | load", mode);
         exit(1);
