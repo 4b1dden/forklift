@@ -1,7 +1,20 @@
+use std::{
+    fs,
+    io::{self, BufRead},
+    path::Path,
+    process::exit,
+};
+
 pub type OpCode = u8;
 
 pub const OP_RETURN: OpCode = 0x0;
 pub const OP_CONSTANT: OpCode = 0x1;
+pub const OP_NEGATE: OpCode = 0x2;
+
+pub const OP_ADD: OpCode = 0x3;
+pub const OP_SUBTRACT: OpCode = 0x4;
+pub const OP_MULTIPLY: OpCode = 0x5;
+pub const OP_DIVIDE: OpCode = 0x6;
 
 fn primitive_instruction(name: &str, offset: usize) -> usize {
     print!("{:#}", name);
@@ -34,10 +47,12 @@ pub struct ValueArray {
 
 const CAPACITY_LOW_THRESHOLD: usize = 8;
 const CAPACITY_INCREMENT_MULTIPLIER: usize = 2;
+const STACK_CAPACITY: usize = 256;
 
 pub struct VM {
     chunk: Chunk,
     ip: u8,
+    stack: Vec<Value>, // SIZE = STACK_CAPACITY
 }
 
 #[derive(Debug)]
@@ -47,6 +62,8 @@ pub enum INTERPRETER_RESULT {
     INTERPRET_RUNTIME_ERROR,
 }
 
+const DEBUG_TRACE_EXECUTION: bool = true;
+
 impl VM {
     pub fn interpret(chunk: Chunk) -> INTERPRETER_RESULT {
         let mut vm = Self::with_chunk(chunk);
@@ -55,21 +72,67 @@ impl VM {
     }
 
     pub fn with_chunk(chunk: Chunk) -> Self {
-        Self { chunk, ip: 0 }
+        Self {
+            chunk,
+            ip: 0,
+            stack: Vec::with_capacity(STACK_CAPACITY),
+        }
+    }
+
+    pub fn push(&mut self, val: Value) {
+        self.stack.push(val);
+    }
+
+    pub fn pop(&mut self) -> Value {
+        self.stack.pop().unwrap()
     }
 
     fn run(&mut self) -> INTERPRETER_RESULT {
         let result = loop {
             let byte = read_byte(self);
 
-            if byte == OP_CONSTANT {
-                let const_val = read_const(self);
-                print_value(const_val);
+            if DEBUG_TRACE_EXECUTION {
+                print!("        ");
+                for val in self.stack.iter() {
+                    print!("[ {} ]", val);
+                }
                 print!("\n");
-            } else if byte == OP_RETURN {
-                break INTERPRETER_RESULT::INTERPRET_OK;
-            } else {
-                break INTERPRETER_RESULT::INTERPRET_COMPILE_ERROR;
+
+                disassemble_instruction(&self.chunk, (self.ip - 1) as usize);
+            }
+
+            match byte {
+                OP_CONSTANT => {
+                    let const_val = read_const(self);
+                    self.push(const_val);
+                }
+                OP_RETURN => {
+                    print_value(self.pop());
+                    println!();
+
+                    break INTERPRETER_RESULT::INTERPRET_OK;
+                }
+                OP_NEGATE => {
+                    let popped = self.pop();
+                    self.push(-popped);
+                }
+                OP_ADD => {
+                    let (b, a) = (self.pop(), self.pop());
+                    self.push(a + b);
+                }
+                OP_SUBTRACT => {
+                    let (b, a) = (self.pop(), self.pop());
+                    self.push(a - b);
+                }
+                OP_MULTIPLY => {
+                    let (b, a) = (self.pop(), self.pop());
+                    self.push(b * a);
+                }
+                OP_DIVIDE => {
+                    let (b, a) = (self.pop(), self.pop());
+                    self.push(a / b);
+                }
+                _ => panic!("Unknown instruction {}", byte),
             }
         };
 
@@ -171,46 +234,103 @@ impl Chunk {
 
         let mut offset = 0;
         while offset < self.count {
-            offset = Chunk::disassemble_instruction(&self, offset);
+            offset = disassemble_instruction(&self, offset);
         }
 
         println!(" ------- op sourcecode ");
         println!("{:?}", self.code);
     }
+}
 
-    pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
-        print!("{} ", offset);
+pub fn disassemble_instruction(chunk: &Chunk, offset: usize) -> usize {
+    print!("{} ", offset);
 
-        if offset > 0 && chunk.lines[offset] == chunk.lines[offset - 1] {
-            print!("     |  ");
-        } else {
-            print!("   {}  ", chunk.lines[offset]);
-        }
+    if offset > 0 && chunk.lines[offset] == chunk.lines[offset - 1] {
+        print!("     |  ");
+    } else {
+        print!("   {}  ", chunk.lines[offset]);
+    }
 
-        let instruction = &chunk.code[offset];
+    let instruction = &chunk.code[offset];
 
-        match *instruction {
-            OP_RETURN => primitive_instruction("RETURN", offset),
-            OP_CONSTANT => constant_instruction("CONSTANT", chunk, offset),
-            _ => todo!("disassemble_instruction not exhaustive"),
-        }
+    match *instruction {
+        OP_RETURN => primitive_instruction("RETURN", offset),
+        OP_CONSTANT => constant_instruction("CONSTANT", chunk, offset),
+        OP_NEGATE => primitive_instruction("NEGATE", offset),
+        OP_ADD => primitive_instruction("ADD", offset),
+        OP_SUBTRACT => primitive_instruction("SUBTRACT", offset),
+        OP_MULTIPLY => primitive_instruction("MULTIPLY", offset),
+        OP_DIVIDE => primitive_instruction("DIVIDE", offset),
+        _ => todo!("disassemble_instruction not exhaustive"),
     }
 }
 
-pub fn main() {
+pub fn main(args: &[String]) {
+    if args[2] == "repl" {
+        run_repl_loop();
+    } else if args[2] == "load" {
+        let path = Path::new(&args[3]);
+        load_and_eval_file(path);
+    } else {
+        println!("Unknown mode, use repl | load");
+        exit(0);
+    }
+
+    /*
     let mut chunk = Chunk::new();
 
     let constant1 = chunk.add_constant(1.2);
     chunk.write(OP_CONSTANT, 123);
     chunk.write(constant1, 123);
 
-    let constant2 = chunk.add_constant(2.4);
+    let constant2 = chunk.add_constant(3.4);
     chunk.write(OP_CONSTANT, 123);
     chunk.write(constant2, 123);
+
+    chunk.write(OP_ADD, 123);
+
+    let constant3 = chunk.add_constant(5.6);
+    chunk.write(OP_CONSTANT, 123);
+    chunk.write(constant3, 123);
+
+    chunk.write(OP_DIVIDE, 123);
+    chunk.write(OP_NEGATE, 123);
 
     chunk.write(OP_RETURN, 456);
 
     // chunk.disassemble("test");
     let result = VM::interpret(chunk);
     println!("{:?}", result);
+    */
+}
+
+fn interpret(source: &str) -> INTERPRETER_RESULT {
+    let compiled = compile(source);
+
+    INTERPRETER_RESULT::INTERPRET_OK
+}
+
+fn compile(source: &str) {}
+
+fn load_and_eval_file(path: &Path) {
+    let contents = fs::read_to_string(path).expect("Filepath has to be valid");
+}
+
+use crate::vm::tokenize;
+fn run_repl_loop() {
+    let mut line = String::new();
+    let stdin = io::stdin();
+
+    loop {
+        println!("fl >>>");
+        line.clear();
+        stdin.lock().read_line(&mut line).unwrap();
+
+        if line.trim().to_lowercase() != "exit" {
+            let result = tokenize(&line);
+            println!("{:?}", result);
+        } else {
+            break;
+        }
+    }
 }

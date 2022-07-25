@@ -36,7 +36,7 @@ fn main() {
         let filepath = Path::new(&args[2]);
         load_and_eval_file(filepath);
     } else if mode == "vm" {
-        vm::main();
+        vm::main(&args);
     } else {
         println!("Unknown mode {:#}, use repl | load", mode);
         exit(1);
