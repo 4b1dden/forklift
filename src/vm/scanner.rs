@@ -4,8 +4,7 @@ use std::str;
 pub enum TokenKind {
     // primitive types
     Identifier(String),
-    Integer(i32),
-    Decimal(f64),
+    Number(f64),
 
     // semantics
     LParen,
@@ -61,6 +60,8 @@ pub enum TokenKind {
 pub struct Lexer<'a> {
     source: &'a str,
     pub position: usize,
+    pub had_error: bool,
+    pub panic_mode: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
@@ -74,7 +75,29 @@ impl<'a> Lexer<'a> {
         Lexer {
             source,
             position: 0,
+            had_error: false,
+            panic_mode: false,
         }
+    }
+
+    pub fn consume(&mut self, token_kind: TokenKind) -> LexerResult<()> {
+        match self.next_token() {
+            Ok(Some(next_tok)) => {
+                if next_tok.kind == token_kind {
+                    Ok(())
+                } else {
+                    Err(format!(
+                        "Expected {:?}, got {:?} @ {}",
+                        token_kind, next_tok.kind, next_tok.index_start,
+                    ))
+                }
+            }
+            _ => Err(String::from("skap")),
+        }
+    }
+
+    pub fn panic_mode_on(&mut self) {
+        self.panic_mode = true;
     }
 
     pub fn next_token(&mut self) -> LexerResult<Option<LexedToken>> {
@@ -100,10 +123,7 @@ impl<'a> Lexer<'a> {
             self.move_forward(bytes_skipped);
             Ok((tok, bytes_skipped))
         } else {
-            Err(LexerError::CouldNotTokenize {
-                position: self.position,
-                snippet: self.source[..snippet_err_offset].to_owned(),
-            })
+            Err(String::from("LexerError::CouldNotTokenize"))
         }
     }
 
@@ -118,7 +138,7 @@ impl<'a> Lexer<'a> {
     }
 }
 
-pub type LexerResult<T> = Result<T, LexerError>;
+pub type LexerResult<T> = Result<T, String>;
 
 #[derive(PartialEq, Debug)]
 pub enum LexerError {
@@ -142,10 +162,10 @@ pub fn tokenize_ident(src: &str) -> LexerResult<(TokenKind, usize)> {
     match src.chars().next() {
         Some(ch) => {
             if ch.is_digit(10) {
-                return Err(LexerError::IdentStartsWithANumber);
+                return Err(String::from("LexerError::IdentStartsWithANumber"));
             }
         }
-        None => return Err(LexerError::UnexpectedEOF),
+        None => return Err(String::from("LexerError::UnexpectedEOF")),
     }
 
     let (received, bytes_read) = take_while(src, |ch| ch == '_' || ch.is_alphanumeric())?;
@@ -196,22 +216,14 @@ pub fn tokenize_arbitrary_number(src: &str) -> LexerResult<(TokenKind, usize)> {
         }
     })?;
 
-    let tok = if has_dot {
-        let dec: f64 = received
-            .parse()
-            .map_err(|_| LexerError::CouldNotParseType {
-                expected_type: String::from("f64"),
-                received: received.to_string(),
-            })?;
-        TokenKind::Decimal(dec)
-    } else {
-        let int: i32 = received
-            .parse()
-            .map_err(|_| LexerError::CouldNotParseType {
-                expected_type: String::from("i32"),
-                received: received.to_string(),
-            })?;
-        TokenKind::Integer(int)
+    let tok = {
+        let dec: f64 = received.parse().map_err(|_| {
+            format!(
+                "LexerError::CouldNotParseType expected f64, got {:?}",
+                received.to_string()
+            )
+        })?;
+        TokenKind::Number(dec)
     };
 
     Ok((tok, bytes_read))
@@ -241,7 +253,7 @@ where
     }
 
     if current_index == 0 {
-        Err(LexerError::NoCharMatch)
+        Err(String::from("LexerError::NoCharMatch"))
     } else {
         Ok((&data[..current_index], current_index))
     }
@@ -256,7 +268,6 @@ pub fn tokenize_single_token(data: &str) -> LexerResult<(TokenKind, usize)> {
             '+' => Ok((TokenKind::Plus, 1)),
             '-' => Ok((TokenKind::Minus, 1)),
             '*' => Ok((TokenKind::Asterisk, 1)),
-            '/' => Ok((TokenKind::Slash, 1)),
             '(' => Ok((TokenKind::LParen, 1)),
             ')' => Ok((TokenKind::RParen, 1)),
             '{' => Ok((TokenKind::LBrace, 1)),
@@ -314,12 +325,12 @@ pub fn tokenize_single_token(data: &str) -> LexerResult<(TokenKind, usize)> {
                         Ok((TokenKind::Slash, 1))
                     }
                 } else {
-                    Ok((TokenKind::EOF, 1))
+                    Ok((TokenKind::Slash, 1))
                 }
             }
             '0'..='9' => tokenize_arbitrary_number(data),
             c @ '_' | c if c.is_alphabetic() => tokenize_ident(data),
-            _ => Err(LexerError::UnsupportedChar(upcoming)),
+            _ => Err(String::from("LexerError::UnsupportedChar(upcoming)")),
         }
     } else {
         Ok((TokenKind::EOF, 1))
@@ -330,9 +341,18 @@ pub fn tokenize(src: &str) -> LexerResult<Vec<LexedToken>> {
     let mut tokenizer = Lexer::new(src);
     let mut tokens = vec![];
 
-    while let Some(lexed_token) = tokenizer.next_token()? {
+    while let Ok(Some(lexed_token)) = tokenizer.next_token() {
         tokens.push(lexed_token);
     }
+
+    tokens.push(LexedToken {
+        kind: TokenKind::EOF,
+        index_start: if tokens.len() > 0 {
+            tokens.last().unwrap().index_start + 1
+        } else {
+            0
+        },
+    });
 
     Ok(tokens)
 }

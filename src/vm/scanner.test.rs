@@ -26,27 +26,27 @@ fn test_tokenize_ident_error() {
     let src = String::from("12foo");
     let result = tokenize_ident(&src);
 
-    let expected = Err(LexerError::IdentStartsWithANumber);
+    let expected = Err(String::from("LexerError::IdentStartsWithANumber"));
     assert_eq!(result, expected);
 }
 
 #[test]
 fn test_tokenize_arbitrary_number() {
     let src1 = String::from("12.45");
-    let expected1 = (TokenKind::Decimal(12.45), 5);
+    let expected1 = (TokenKind::Number(12.45), 5);
     let result1 = tokenize_arbitrary_number(&src1).unwrap();
 
     assert_eq!(result1, expected1);
 
     let src2 = String::from("6");
-    let expected2 = (TokenKind::Integer(6), 1);
+    let expected2 = (TokenKind::Number(6_f64), 1);
     let result2 = tokenize_arbitrary_number(&src2).unwrap();
 
     assert_eq!(result2, expected2);
 
     let src3 = String::from("100.45");
     let result3 = tokenize_arbitrary_number(&src3).unwrap();
-    let expected3 = (TokenKind::Decimal(100.45), 6);
+    let expected3 = (TokenKind::Number(100.45), 6);
 
     assert_eq!(result3, expected3);
 }
@@ -94,11 +94,11 @@ fn test_tokenize_single_token() {
 fn test_tokenize_single_token_special_cases() {
     assert_eq!(
         tokenize_single_token("123"),
-        Ok((TokenKind::Integer(123), 3))
+        Ok((TokenKind::Number(123_f64), 3))
     );
     assert_eq!(
         tokenize_single_token("123.45"),
-        Ok((TokenKind::Decimal(123.45), 6))
+        Ok((TokenKind::Number(123.45), 6))
     );
 }
 
@@ -111,7 +111,8 @@ fn test_e2e() {
             TokenKind::Identifier(String::from("a")),
             TokenKind::Plus,
             TokenKind::Identifier(String::from("b")),
-            TokenKind::Semicolon
+            TokenKind::Semicolon,
+            TokenKind::EOF,
         ]
     ));
 
@@ -128,6 +129,7 @@ fn test_e2e() {
             TokenKind::RParen,
             TokenKind::Semicolon,
             TokenKind::RBrace,
+            TokenKind::EOF,
         ]
     ));
 
@@ -137,7 +139,7 @@ fn test_e2e() {
             TokenKind::LET,
             TokenKind::Identifier(String::from("i")),
             TokenKind::Eq,
-            TokenKind::Integer(0),
+            TokenKind::Number(0_f64),
             TokenKind::Semicolon,
             TokenKind::FOR,
             TokenKind::LParen,
@@ -146,6 +148,18 @@ fn test_e2e() {
             TokenKind::RParen,
             TokenKind::LBrace,
             TokenKind::RBrace,
+            TokenKind::EOF,
+        ]
+    ));
+
+    assert!(check_order_only(
+        tokenize("foo; + // bar").expect("Tokenizer should not fail"),
+        vec![
+            TokenKind::Identifier(String::from("foo")),
+            TokenKind::Semicolon,
+            TokenKind::Plus,
+            TokenKind::COMMENT,
+            TokenKind::EOF,
         ]
     ));
 }

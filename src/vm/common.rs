@@ -1,3 +1,4 @@
+use crate::vm::compile;
 use std::{
     fs,
     io::{self, BufRead},
@@ -49,23 +50,24 @@ const CAPACITY_LOW_THRESHOLD: usize = 8;
 const CAPACITY_INCREMENT_MULTIPLIER: usize = 2;
 const STACK_CAPACITY: usize = 256;
 
+#[derive(Debug)]
+pub enum INTERPRETER_ERROR {
+    INTERPRET_COMPILE_ERROR,
+    INTERPRET_RUNTIME_ERROR,
+}
+
+pub type VmResult<T> = Result<T, INTERPRETER_ERROR>;
+
+const DEBUG_TRACE_EXECUTION: bool = true;
+
 pub struct VM {
     chunk: Chunk,
     ip: u8,
     stack: Vec<Value>, // SIZE = STACK_CAPACITY
 }
 
-#[derive(Debug)]
-pub enum INTERPRETER_RESULT {
-    INTERPRET_OK,
-    INTERPRET_COMPILE_ERROR,
-    INTERPRET_RUNTIME_ERROR,
-}
-
-const DEBUG_TRACE_EXECUTION: bool = true;
-
 impl VM {
-    pub fn interpret(chunk: Chunk) -> INTERPRETER_RESULT {
+    pub fn interpret(chunk: Chunk) -> VmResult<()> {
         let mut vm = Self::with_chunk(chunk);
 
         vm.run()
@@ -87,7 +89,7 @@ impl VM {
         self.stack.pop().unwrap()
     }
 
-    fn run(&mut self) -> INTERPRETER_RESULT {
+    fn run(&mut self) -> VmResult<()> {
         let result = loop {
             let byte = read_byte(self);
 
@@ -110,7 +112,7 @@ impl VM {
                     print_value(self.pop());
                     println!();
 
-                    break INTERPRETER_RESULT::INTERPRET_OK;
+                    break Ok(());
                 }
                 OP_NEGATE => {
                     let popped = self.pop();
@@ -275,42 +277,15 @@ pub fn main(args: &[String]) {
         println!("Unknown mode, use repl | load");
         exit(0);
     }
-
-    /*
-    let mut chunk = Chunk::new();
-
-    let constant1 = chunk.add_constant(1.2);
-    chunk.write(OP_CONSTANT, 123);
-    chunk.write(constant1, 123);
-
-    let constant2 = chunk.add_constant(3.4);
-    chunk.write(OP_CONSTANT, 123);
-    chunk.write(constant2, 123);
-
-    chunk.write(OP_ADD, 123);
-
-    let constant3 = chunk.add_constant(5.6);
-    chunk.write(OP_CONSTANT, 123);
-    chunk.write(constant3, 123);
-
-    chunk.write(OP_DIVIDE, 123);
-    chunk.write(OP_NEGATE, 123);
-
-    chunk.write(OP_RETURN, 456);
-
-    // chunk.disassemble("test");
-    let result = VM::interpret(chunk);
-    println!("{:?}", result);
-    */
 }
 
-fn interpret(source: &str) -> INTERPRETER_RESULT {
-    let compiled = compile(source);
+fn interpret(source: &str) -> VmResult<()> {
+    let compiled_chunk = compile(source).map_err(|_| INTERPRETER_ERROR::INTERPRET_COMPILE_ERROR)?;
 
-    INTERPRETER_RESULT::INTERPRET_OK
+    let mut vm = VM::with_chunk(compiled_chunk);
+
+    vm.run()
 }
-
-fn compile(source: &str) {}
 
 fn load_and_eval_file(path: &Path) {
     let contents = fs::read_to_string(path).expect("Filepath has to be valid");
